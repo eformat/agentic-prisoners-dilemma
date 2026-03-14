@@ -13,8 +13,18 @@ Two AI agents play a repeated prisoner's dilemma, each deciding whether to coope
 
 ## Architecture
 
-- **Frontend** - Next.js / React / Tailwind CSS, served as static export via nginx
-- **Backend** - Python / FastAPI, proxies MaaS API and orchestrates game turns
+- **Frontend** - Next.js (standalone server) / React / Tailwind CSS. All backend communication goes through Next.js server actions - no tokens or secrets are exposed to the browser.
+- **Backend** - Python / FastAPI. Stores the MaaS token server-side and orchestrates game turns.
+
+## Security
+
+Bearer and MaaS tokens never reach the browser. The flow is:
+
+1. Bearer token is provided via env var (OpenShift) or Controls panel (local dev)
+2. The backend exchanges it for a MaaS session token and stores it in memory
+3. Next.js server actions proxy all requests to the backend - the browser only sees game data
+
+On OpenShift the Controls panel is hidden entirely.
 
 ## Prerequisites
 
@@ -50,7 +60,7 @@ make podman-push-all
 make helm-deploy HELM_ARGS="--set backend.secret.BEARER=your-bearer-token"
 ```
 
-When deployed to OpenShift, the app auto-connects using the `BEARER` secret and the Controls panel is hidden.
+The app auto-connects using the `BEARER` secret. The Controls panel is hidden and no tokens are exposed to users.
 
 ## Configuration
 
@@ -60,5 +70,6 @@ When deployed to OpenShift, the app auto-connects using the `BEARER` secret and 
 | `backend.env.MAAS_HOST` | MaaS API host | `https://maas.apps.ocp.cloud.rhai-tmm.dev` |
 | `backend.image.repository` | Backend image | `quay.io/eformat/prisoners-dilemma-backend` |
 | `frontend.image.repository` | Frontend image | `quay.io/eformat/prisoners-dilemma-frontend` |
+| `frontend.port` | Frontend container port | `3000` |
 | `route.enabled` | Create OpenShift Route | `true` |
 | `route.host` | Custom route hostname | `""` (auto-generated) |

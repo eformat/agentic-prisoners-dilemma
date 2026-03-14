@@ -1,18 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  connectWithBearer,
+  autoConnect,
+  fetchDefaultPrompts,
+  playTurn,
+} from "./actions";
 
 function isLocalDev() {
   if (typeof window === "undefined") return true;
   const { hostname } = window.location;
   return hostname === "localhost" || hostname === "127.0.0.1";
-}
-
-function getApiBase() {
-  if (typeof window === "undefined") return "http://localhost:8000";
-  if (isLocalDev()) return "http://localhost:8000";
-  const { protocol, host } = window.location;
-  return `${protocol}//${host}`;
 }
 
 interface MaasModel {
@@ -154,11 +153,8 @@ function ModelSelector({
 
 // --- Main Page ---
 export default function Home() {
-  const [apiBase] = useState(getApiBase);
-
-  // Auth & models
+  // Auth & models - no tokens stored in browser
   const [bearer, setBearer] = useState("");
-  const [token, setToken] = useState("");
   const [models, setModels] = useState<MaasModel[]>([]);
   const [connected, setConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>("Disconnected");
@@ -195,44 +191,25 @@ export default function Home() {
   const stopRef = useRef(false);
   const historyEndRef = useRef<HTMLDivElement>(null);
 
-  const applyConnection = useCallback(
-    (newToken: string, modelsData: MaasModel[]) => {
-      setToken(newToken);
-      setModels(modelsData);
-      setConnected(true);
-      setConnectionStatus(`Connected - ${modelsData.length} models`);
-    },
-    []
-  );
-
-  // Auto-connect on mount + load default prompts
+  // Auto-connect on mount + load default prompts (via server actions)
   useEffect(() => {
-    // Load prompts
-    fetch(`${apiBase}/api/default-prompts`)
-      .then((r) => r.json())
-      .then((data) => {
-        defaultPromptsRef.current = data;
-        setSupervisorPrompt(data.supervisor);
-        setRedhatPrompt(data.redhat);
-        setNvidiaPrompt(data.nvidia);
-      })
-      .catch(() => {});
+    fetchDefaultPrompts().then((data) => {
+      defaultPromptsRef.current = data;
+      setSupervisorPrompt(data.supervisor);
+      setRedhatPrompt(data.redhat);
+      setNvidiaPrompt(data.nvidia);
+    });
 
-    // Try auto-connect (backend uses BEARER env var)
     setConnectionStatus("Connecting...");
-    fetch(`${apiBase}/api/auto-connect`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.available && data.token) {
-          applyConnection(data.token, data.models?.data || []);
-        } else {
-          setConnectionStatus("Disconnected");
-        }
-      })
-      .catch(() => {
+    autoConnect().then((data) => {
+      if (data.connected) {
+        setModels(data.models || []);
+        setConnected(true);
+        setConnectionStatus(`Connected - ${(data.models || []).length} models`);
+      } else {
         setConnectionStatus("Disconnected");
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      }
+    });
   }, []);
 
   // Scroll history into view
@@ -256,38 +233,27 @@ export default function Home() {
   const handleManualConnect = async () => {
     setConnectionStatus("Connecting...");
     setError("");
-    try {
-      const resp = await fetch(`${apiBase}/api/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bearer }),
-      });
-      if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`);
-      const data = await resp.json();
-
-      const modelsResp = await fetch(
-        `${apiBase}/api/models?token=${encodeURIComponent(data.token)}`
-      );
-      if (!modelsResp.ok) throw new Error(`Models request failed: ${modelsResp.status}`);
-      const modelsData = await modelsResp.json();
-      applyConnection(data.token, modelsData.data || []);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
+    const data = await connectWithBearer(bearer);
+    if (data.connected) {
+      setModels(data.models || []);
+      setConnected(true);
+      setConnectionStatus(`Connected - ${(data.models || []).length} models`);
+      setBearer("");
+    } else {
+      setError(data.error || "Connection failed");
       setConnected(false);
       setConnectionStatus("Failed");
     }
   };
 
   const handleDisconnect = () => {
-    setToken("");
     setModels([]);
     setConnected(false);
     setConnectionStatus("Disconnected");
   };
 
   const playTurns = async () => {
-    if (!token || !supervisorModel || !redhatModel || !nvidiaModel) {
+    if (!connected || !supervisorModel || !redhatModel || !nvidiaModel) {
       setError("Please connect and select models for all agents first.");
       return;
     }
@@ -305,49 +271,38 @@ export default function Home() {
       setShowBars(true);
       setPhase("Supervisor is setting the stage...");
 
-      try {
-        const resp = await fetch(`${apiBase}/api/play-turn`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            token,
-            history: currentHistory,
-            supervisor_prompt: supervisorPrompt,
-            redhat_prompt: redhatPrompt,
-            nvidia_prompt: nvidiaPrompt,
-            supervisor_model_url: getModelUrl(supervisorModel),
-            supervisor_model_id: supervisorModel,
-            redhat_model_url: getModelUrl(redhatModel),
-            redhat_model_id: redhatModel,
-            nvidia_model_url: getModelUrl(nvidiaModel),
-            nvidia_model_id: nvidiaModel,
-            supervisor_temp: supervisorTemp,
-            redhat_temp: redhatTemp,
-            nvidia_temp: nvidiaTemp,
-          }),
-        });
+      const result = await playTurn({
+        history: currentHistory,
+        supervisor_prompt: supervisorPrompt,
+        redhat_prompt: redhatPrompt,
+        nvidia_prompt: nvidiaPrompt,
+        supervisor_model_url: getModelUrl(supervisorModel),
+        supervisor_model_id: supervisorModel,
+        redhat_model_url: getModelUrl(redhatModel),
+        redhat_model_id: redhatModel,
+        nvidia_model_url: getModelUrl(nvidiaModel),
+        nvidia_model_id: nvidiaModel,
+        supervisor_temp: supervisorTemp,
+        redhat_temp: redhatTemp,
+        nvidia_temp: nvidiaTemp,
+      });
 
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          throw new Error(errData.detail || `Turn failed: ${resp.status}`);
-        }
-
-        const result: TurnResult = await resp.json();
-        currentHistory = [...currentHistory, result];
-        rScore += result.redhat_score_change;
-        nScore += result.nvidia_score_change;
-
-        setHistory([...currentHistory]);
-        setRedhatScore(rScore);
-        setNvidiaScore(nScore);
+      if (result.error) {
+        setError(result.error);
         setPhase("");
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setError(msg);
-        break;
-      } finally {
         setTimeout(() => setShowBars(false), 1500);
+        break;
       }
+
+      currentHistory = [...currentHistory, result as TurnResult];
+      rScore += result.redhat_score_change;
+      nScore += result.nvidia_score_change;
+
+      setHistory([...currentHistory]);
+      setRedhatScore(rScore);
+      setNvidiaScore(nScore);
+      setPhase("");
+      setTimeout(() => setShowBars(false), 1500);
 
       if (i < numTurns - 1 && !stopRef.current) {
         await new Promise((r) => setTimeout(r, 2000));
@@ -382,7 +337,6 @@ export default function Home() {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
-          {/* Connection Status */}
           <div className="flex items-center gap-2 text-xs">
             <div
               className={`h-2 w-2 rounded-full ${
@@ -391,7 +345,6 @@ export default function Home() {
             />
             <span className="text-text-muted">{connectionStatus}</span>
           </div>
-          {/* Controls Toggle - only shown in local dev */}
           {showControls && (
             <button
               onClick={() => setControlsOpen(!controlsOpen)}
@@ -406,49 +359,35 @@ export default function Home() {
       {/* Controls Panel (collapsible, local dev only) */}
       {showControls && controlsOpen && (
         <div className="animate-fade-in-up border-b border-cell-border bg-panel-light px-6 py-4">
-          <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
-            {/* Connection */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-text-muted">
-                MaaS Bearer Token
-              </label>
-              <input
-                type="password"
-                value={bearer}
-                onChange={(e) => setBearer(e.target.value)}
-                placeholder="Paste bearer token for manual connect..."
-                className="w-full rounded border border-cell-border bg-cell-bg px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-cell-bars"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleManualConnect}
-                  disabled={!bearer || connected}
-                  className="rounded bg-rh-red px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-rh-red-dark disabled:opacity-30"
-                >
-                  Connect
-                </button>
-                <button
-                  onClick={handleDisconnect}
-                  disabled={!connected}
-                  className="rounded border border-cell-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:text-text-primary disabled:opacity-30"
-                >
-                  Disconnect
-                </button>
-              </div>
-            </div>
-            {/* API Info */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-text-muted">
-                Backend API
-              </label>
-              <div className="rounded border border-cell-border bg-cell-bg px-3 py-2 text-sm text-text-muted">
-                {apiBase}
-              </div>
-              <p className="text-xs text-text-muted">
-                {connected
-                  ? `${models.length} models available. Token expires in 720h.`
-                  : "Set BEARER env var on backend for auto-connect, or paste token above."}
-              </p>
+          <div className="mx-auto max-w-5xl space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-text-muted">
+              MaaS Bearer Token
+            </label>
+            <p className="text-xs text-text-muted">
+              Token is sent to the server and never stored in the browser.
+            </p>
+            <input
+              type="password"
+              value={bearer}
+              onChange={(e) => setBearer(e.target.value)}
+              placeholder="Paste bearer token for manual connect..."
+              className="w-full rounded border border-cell-border bg-cell-bg px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-cell-bars"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleManualConnect}
+                disabled={!bearer || connected}
+                className="rounded bg-rh-red px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-rh-red-dark disabled:opacity-30"
+              >
+                Connect
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={!connected}
+                className="rounded border border-cell-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:text-text-primary disabled:opacity-30"
+              >
+                Disconnect
+              </button>
             </div>
           </div>
         </div>

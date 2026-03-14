@@ -16,6 +16,36 @@ from src.prompts import (
 MAAS_HOST = os.getenv("MAAS_HOST", "https://maas.apps.ocp.cloud.rhai-tmm.dev")
 http_client: httpx.AsyncClient
 
+# Server-side token storage - never exposed to the browser
+_maas_token: str = ""
+_models_cache: list[dict] = []
+
+
+async def _obtain_token(bearer: str) -> tuple[str, list[dict]]:
+    """Get MaaS token from bearer and fetch models. Store both server-side."""
+    global _maas_token, _models_cache
+    resp = await http_client.post(
+        f"{MAAS_HOST}/maas-api/v1/tokens",
+        headers={
+            "Authorization": f"Bearer {bearer}",
+            "Content-Type": "application/json",
+        },
+        json={"expiration": "720h"},
+    )
+    resp.raise_for_status()
+    _maas_token = resp.json().get("token", "")
+
+    models_resp = await http_client.get(
+        f"{MAAS_HOST}/maas-api/v1/models",
+        headers={
+            "Authorization": f"Bearer {_maas_token}",
+            "Content-Type": "application/json",
+        },
+    )
+    models_resp.raise_for_status()
+    _models_cache = models_resp.json().get("data", [])
+    return _maas_token, _models_cache
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,12 +64,11 @@ app.add_middleware(
 )
 
 
-class TokenRequest(BaseModel):
+class ConnectRequest(BaseModel):
     bearer: str
 
 
 class TurnRequest(BaseModel):
-    token: str
     history: list[dict] = []
     supervisor_prompt: str = DEFAULT_SUPERVISOR_PROMPT
     redhat_prompt: str = DEFAULT_REDHAT_PROMPT
@@ -60,79 +89,50 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/api/auto-connect")
-async def auto_connect():
-    """Auto-connect using BEARER env var. Returns token + models if available."""
-    bearer = os.getenv("BEARER", "")
-    if not bearer:
-        return {"available": False}
-    try:
-        resp = await http_client.post(
-            f"{MAAS_HOST}/maas-api/v1/tokens",
-            headers={
-                "Authorization": f"Bearer {bearer}",
-                "Content-Type": "application/json",
-            },
-            json={"expiration": "720h"},
-        )
-        resp.raise_for_status()
-        token = resp.json().get("token", "")
-        models_resp = await http_client.get(
-            f"{MAAS_HOST}/maas-api/v1/models",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-        models_resp.raise_for_status()
-        return {
-            "available": True,
-            "token": token,
-            "models": models_resp.json(),
-        }
-    except Exception as e:
-        return {"available": False, "error": str(e)}
+@app.get("/api/status")
+async def get_status():
+    return {
+        "connected": bool(_maas_token),
+        "model_count": len(_models_cache),
+    }
 
 
-@app.post("/api/token")
-async def get_token(req: TokenRequest):
+@app.post("/api/connect")
+async def connect(req: ConnectRequest):
+    """Manual connect with a bearer token. Token is stored server-side only."""
     try:
-        resp = await http_client.post(
-            f"{MAAS_HOST}/maas-api/v1/tokens",
-            headers={
-                "Authorization": f"Bearer {req.bearer}",
-                "Content-Type": "application/json",
-            },
-            json={"expiration": "720h"},
-        )
-        resp.raise_for_status()
-        return resp.json()
+        _, models = await _obtain_token(req.bearer)
+        return {"connected": True, "models": models}
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/auto-connect")
+async def auto_connect():
+    """Auto-connect using BEARER env var. Token is stored server-side only."""
+    bearer = os.getenv("BEARER", "")
+    if not bearer:
+        return {"connected": False}
+    try:
+        _, models = await _obtain_token(bearer)
+        return {"connected": True, "models": models}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
 
 
 @app.get("/api/models")
-async def get_models(token: str):
-    try:
-        resp = await http_client.get(
-            f"{MAAS_HOST}/maas-api/v1/models",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def get_models():
+    if not _maas_token:
+        raise HTTPException(status_code=401, detail="Not connected")
+    return {"data": _models_cache}
 
 
 @app.post("/api/play-turn")
 def play_turn(req: TurnRequest):
+    if not _maas_token:
+        raise HTTPException(status_code=401, detail="Not connected")
     try:
         result = play_single_turn(
             history=req.history,
@@ -145,7 +145,7 @@ def play_turn(req: TurnRequest):
             redhat_model_id=req.redhat_model_id,
             nvidia_model_url=req.nvidia_model_url,
             nvidia_model_id=req.nvidia_model_id,
-            token=req.token,
+            token=_maas_token,
             supervisor_temp=req.supervisor_temp,
             redhat_temp=req.redhat_temp,
             nvidia_temp=req.nvidia_temp,

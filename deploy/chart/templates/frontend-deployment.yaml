@@ -13,8 +13,6 @@ spec:
     metadata:
       labels:
         {{- include "prisoners-dilemma.frontend.selectorLabels" . | nindent 8 }}
-      annotations:
-        checksum/nginx-config: {{ include (print $.Template.BasePath "/frontend-nginx-configmap.yaml") . | sha256sum }}
     spec:
       containers:
         - name: frontend
@@ -24,10 +22,11 @@ spec:
             - name: http
               containerPort: {{ .Values.frontend.port }}
               protocol: TCP
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
+          env:
+            - name: BACKEND_URL
+              value: {{ printf "http://%s-backend:%v" (include "prisoners-dilemma.fullname" .) .Values.backend.port | quote }}
+            - name: HOSTNAME
+              value: "0.0.0.0"
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
           readinessProbe:
@@ -42,7 +41,3 @@ spec:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: {{ include "prisoners-dilemma.fullname" . }}-nginx
