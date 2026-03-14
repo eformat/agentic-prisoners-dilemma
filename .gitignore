@@ -1,0 +1,7 @@
+node_modules/
+venv/
+.next/
+_pytest_cache/
+_pycache/
+__pycache__/
+out/

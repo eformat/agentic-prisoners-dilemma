@@ -1,0 +1,41 @@
+backend:
+  image:
+    repository: quay.io/eformat/prisoners-dilemma-backend
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  env:
+    MAAS_HOST: "https://maas.apps.ocp.cloud.rhai-tmm.dev"
+  secret:
+    create: true
+    BEARER: ""
+
+frontend:
+  image:
+    repository: quay.io/eformat/prisoners-dilemma-frontend
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+route:
+  enabled: true
+  host: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
