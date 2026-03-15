@@ -82,6 +82,9 @@ class TurnRequest(BaseModel):
     supervisor_temp: float = 0.7
     redhat_temp: float = 0.7
     nvidia_temp: float = 0.7
+    supervisor_max_tokens: int = 2048
+    redhat_max_tokens: int = 2048
+    nvidia_max_tokens: int = 2048
 
 
 @app.get("/api/health")
@@ -149,6 +152,9 @@ def play_turn(req: TurnRequest):
             supervisor_temp=req.supervisor_temp,
             redhat_temp=req.redhat_temp,
             nvidia_temp=req.nvidia_temp,
+            supervisor_max_tokens=req.supervisor_max_tokens,
+            redhat_max_tokens=req.redhat_max_tokens,
+            nvidia_max_tokens=req.nvidia_max_tokens,
         )
         return result
     except Exception as e:

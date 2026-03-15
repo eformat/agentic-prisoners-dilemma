@@ -106,6 +106,8 @@ function ModelSelector({
   onSelectModel,
   temperature,
   onTemperatureChange,
+  maxTokens,
+  onMaxTokensChange,
   color,
 }: {
   label: string;
@@ -114,6 +116,8 @@ function ModelSelector({
   onSelectModel: (id: string) => void;
   temperature: number;
   onTemperatureChange: (t: number) => void;
+  maxTokens: number;
+  onMaxTokensChange: (t: number) => void;
   color: string;
 }) {
   return (
@@ -147,6 +151,16 @@ function ModelSelector({
         style={{ accentColor: color }}
       />
       <span className="w-8 text-xs text-text-muted">{temperature.toFixed(1)}</span>
+      <label className="text-xs text-text-muted">Max Tokens</label>
+      <input
+        type="number"
+        min={256}
+        max={262144}
+        step={256}
+        value={maxTokens}
+        onChange={(e) => onMaxTokensChange(Math.max(256, Math.min(262144, parseInt(e.target.value) || 2048)))}
+        className="w-24 rounded border border-cell-border bg-panel px-2 py-1 text-sm text-text-primary outline-none focus:border-cell-bars"
+      />
     </div>
   );
 }
@@ -170,6 +184,11 @@ export default function Home() {
   const [supervisorTemp, setSupervisorTemp] = useState(0.7);
   const [redhatTemp, setRedhatTemp] = useState(0.7);
   const [nvidiaTemp, setNvidiaTemp] = useState(0.7);
+
+  // Max tokens
+  const [supervisorMaxTokens, setSupervisorMaxTokens] = useState(2048);
+  const [redhatMaxTokens, setRedhatMaxTokens] = useState(2048);
+  const [nvidiaMaxTokens, setNvidiaMaxTokens] = useState(2048);
 
   // Prompts
   const [supervisorPrompt, setSupervisorPrompt] = useState("");
@@ -285,6 +304,9 @@ export default function Home() {
         supervisor_temp: supervisorTemp,
         redhat_temp: redhatTemp,
         nvidia_temp: nvidiaTemp,
+        supervisor_max_tokens: supervisorMaxTokens,
+        redhat_max_tokens: redhatMaxTokens,
+        nvidia_max_tokens: nvidiaMaxTokens,
       });
 
       if (result.error) {
@@ -524,6 +546,8 @@ export default function Home() {
               onSelectModel={setSupervisorModel}
               temperature={supervisorTemp}
               onTemperatureChange={setSupervisorTemp}
+              maxTokens={supervisorMaxTokens}
+              onMaxTokensChange={setSupervisorMaxTokens}
               color="#D4A017"
             />
             <div className="grid grid-cols-2 gap-4">
@@ -534,6 +558,8 @@ export default function Home() {
                 onSelectModel={setRedhatModel}
                 temperature={redhatTemp}
                 onTemperatureChange={setRedhatTemp}
+                maxTokens={redhatMaxTokens}
+                onMaxTokensChange={setRedhatMaxTokens}
                 color="#EE0000"
               />
               <ModelSelector
@@ -543,6 +569,8 @@ export default function Home() {
                 onSelectModel={setNvidiaModel}
                 temperature={nvidiaTemp}
                 onTemperatureChange={setNvidiaTemp}
+                maxTokens={nvidiaMaxTokens}
+                onMaxTokensChange={setNvidiaMaxTokens}
                 color="#76B900"
               />
             </div>
@@ -643,9 +671,11 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
-                  <p className="mb-3 rounded bg-panel-light p-3 text-sm italic text-text-muted">
-                    {turn.supervisor_narration}
-                  </p>
+                  {turn.supervisor_narration && (
+                    <p className="mb-3 rounded bg-panel-light p-3 text-sm italic text-text-muted">
+                      {turn.supervisor_narration}
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded border border-cell-border bg-panel p-3">
                       <div className="mb-2 flex items-center gap-2">

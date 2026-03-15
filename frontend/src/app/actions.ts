@@ -66,6 +66,9 @@ interface PlayTurnConfig {
   supervisor_temp: number;
   redhat_temp: number;
   nvidia_temp: number;
+  supervisor_max_tokens: number;
+  redhat_max_tokens: number;
+  nvidia_max_tokens: number;
 }
 
 export async function playTurn(config: PlayTurnConfig) {

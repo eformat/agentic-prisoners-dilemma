@@ -1,8 +1,11 @@
 import json
+import logging
 import re
 from urllib.parse import urlparse
 
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 PAYOFF_MATRIX = {
@@ -13,9 +16,35 @@ PAYOFF_MATRIX = {
 }
 
 
+def _strip_thinking(text: str) -> str:
+    """Remove thinking/reasoning blocks that some models emit."""
+    # Strip <think>...</think> blocks (Qwen, DeepSeek, etc.)
+    text = re.sub(r"<\|?think\|?>.*?</\|?think\|?>", "", text, flags=re.DOTALL).strip()
+    # Handle unclosed <think> — remove from tag to end of thinking content
+    # (some models emit <think>...\n\n then actual content without closing tag)
+    if re.match(r"<\|?think\|?>", text) and not re.search(r"</\|?think\|?>", text):
+        # No closing tag found; the text is all thinking — return empty so caller handles it
+        text = ""
+    # Strip "Thinking Process:" chain-of-thought preambles
+    thinking_match = re.search(
+        r"(?:^|\n)(?:Thinking Process|Chain of Thought|Internal Reasoning):?\s*\n",
+        text,
+        re.IGNORECASE,
+    )
+    if thinking_match:
+        rest = text[thinking_match.end():]
+        # Find where numbered/bulleted reasoning ends and actual narration begins
+        sections = re.split(r"\n\n(?=[A-Z\"\*])", rest)
+        if len(sections) > 1:
+            for section in reversed(sections):
+                if len(section.strip()) > 50 and not re.match(r"\d+\.", section.strip()):
+                    return section.strip()
+    return text
+
+
 def parse_decision(text: str) -> dict:
     """Extract decision JSON from LLM response, handling markdown fences."""
-    cleaned = text.strip()
+    cleaned = _strip_thinking(text.strip())
     fence = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned, re.DOTALL)
     if fence:
         cleaned = fence.group(1)
@@ -31,17 +60,23 @@ def parse_decision(text: str) -> dict:
         return {"decision": "cooperate", "reasoning": cleaned}
 
 
-def build_history_message(history: list[dict]) -> str:
+def build_history_message(history: list[dict], max_rounds: int = 10) -> str:
     if not history:
         return "This is the first round. There is no prior history."
+    # Only include the most recent rounds to avoid exceeding model context limits
+    recent = history[-max_rounds:]
+    skipped = len(history) - len(recent)
     lines = ["Game history so far:"]
-    for i, turn in enumerate(history, 1):
+    if skipped > 0:
+        lines.append(f"  (Rounds 1-{skipped} omitted for brevity)")
+    for i, turn in enumerate(recent):
+        round_num = skipped + i + 1
         rh = turn["redhat_decision"]
         nv = turn["nvidia_decision"]
         rh_score = turn["redhat_score_change"]
         nv_score = turn["nvidia_score_change"]
         lines.append(
-            f"  Round {i}: Red Hat chose to {rh}, NVIDIA chose to {nv}. "
+            f"  Round {round_num}: Red Hat chose to {rh}, NVIDIA chose to {nv}. "
             f"Red Hat {'gained' if rh_score >= 0 else 'lost'} {abs(rh_score)} GPUs, "
             f"NVIDIA {'gained' if nv_score >= 0 else 'lost'} {abs(nv_score)} GPUs."
         )
@@ -67,6 +102,7 @@ def call_llm(
     system_prompt: str,
     user_message: str,
     temperature: float = 0.7,
+    max_tokens: int = 2048,
 ) -> str:
     serving_name = _serving_model_name(base_url) or model_id
     client = OpenAI(
@@ -80,9 +116,13 @@ def call_llm(
             {"role": "user", "content": user_message},
         ],
         temperature=temperature,
-        max_tokens=500,
+        max_tokens=max_tokens,
     )
-    return response.choices[0].message.content or ""
+    raw = response.choices[0].message.content or ""
+    cleaned = _strip_thinking(raw)
+    if len(cleaned) < 10 and len(raw) > 10:
+        logger.warning("strip_thinking reduced output from %d to %d chars. Raw[:200]: %s", len(raw), len(cleaned), raw[:200])
+    return cleaned
 
 
 def play_single_turn(
@@ -100,6 +140,9 @@ def play_single_turn(
     supervisor_temp: float = 0.7,
     redhat_temp: float = 0.7,
     nvidia_temp: float = 0.7,
+    supervisor_max_tokens: int = 2048,
+    redhat_max_tokens: int = 2048,
+    nvidia_max_tokens: int = 2048,
 ) -> dict:
     history_text = build_history_message(history)
     turn_number = len(history) + 1
@@ -112,6 +155,7 @@ def play_single_turn(
         system_prompt=supervisor_prompt,
         user_message=f"Round {turn_number} is about to begin.\n\n{history_text}\n\nProvide your dramatic narration to set the stage.",
         temperature=supervisor_temp,
+        max_tokens=supervisor_max_tokens,
     )
 
     # Player decisions (could be parallel but keeping simple)
@@ -124,6 +168,7 @@ def play_single_turn(
         system_prompt=redhat_prompt,
         user_message=player_context,
         temperature=redhat_temp,
+        max_tokens=redhat_max_tokens,
     )
 
     nvidia_response = call_llm(
@@ -133,6 +178,7 @@ def play_single_turn(
         system_prompt=nvidia_prompt,
         user_message=player_context,
         temperature=nvidia_temp,
+        max_tokens=nvidia_max_tokens,
     )
 
     redhat_parsed = parse_decision(redhat_response)
