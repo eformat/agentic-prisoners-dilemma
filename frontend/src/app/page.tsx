@@ -67,7 +67,7 @@ function DecisionStamp({ decision }: { decision: string }) {
   return (
     <div className="animate-stamp-in inline-block">
       <span
-        className={`inline-block rounded-sm border-4 px-4 py-1 text-2xl font-black tracking-widest uppercase ${
+        className={`inline-block rounded-sm border-2 px-3 py-0.5 text-lg font-black tracking-widest uppercase sm:border-4 sm:px-4 sm:py-1 sm:text-2xl ${
           isCooperate
             ? "border-cooperate text-cooperate"
             : "border-deceive text-deceive"
@@ -121,46 +121,50 @@ function ModelSelector({
   color: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <label className="text-xs font-bold uppercase tracking-wider" style={{ color }}>
-        {label} Model
-      </label>
-      <select
-        value={selectedModel}
-        onChange={(e) => onSelectModel(e.target.value)}
-        className="rounded border border-cell-border bg-panel px-2 py-1 text-sm text-text-primary outline-none focus:border-cell-bars"
-      >
-        <option value="">Select model...</option>
-        {models
-          .filter((m) => m.ready)
-          .map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.modelDetails?.displayName || m.id}
-            </option>
-          ))}
-      </select>
-      <label className="text-xs text-text-muted">Temp</label>
-      <input
-        type="range"
-        min={0}
-        max={2}
-        step={0.1}
-        value={temperature}
-        onChange={(e) => onTemperatureChange(parseFloat(e.target.value))}
-        className="w-20 accent-current"
-        style={{ accentColor: color }}
-      />
-      <span className="w-8 text-xs text-text-muted">{temperature.toFixed(1)}</span>
-      <label className="text-xs text-text-muted">Max Tokens</label>
-      <input
-        type="number"
-        min={256}
-        max={262144}
-        step={256}
-        value={maxTokens}
-        onChange={(e) => onMaxTokensChange(Math.max(256, Math.min(262144, parseInt(e.target.value) || 2048)))}
-        className="w-24 rounded border border-cell-border bg-panel px-2 py-1 text-sm text-text-primary outline-none focus:border-cell-bars"
-      />
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <label className="text-xs font-bold uppercase tracking-wider" style={{ color }}>
+          {label}
+        </label>
+        <select
+          value={selectedModel}
+          onChange={(e) => onSelectModel(e.target.value)}
+          className="min-w-0 flex-1 rounded border border-cell-border bg-panel px-2 py-1.5 text-sm text-text-primary outline-none focus:border-cell-bars sm:flex-initial"
+        >
+          <option value="">Select model...</option>
+          {models
+            .filter((m) => m.ready)
+            .map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.modelDetails?.displayName || m.id}
+              </option>
+            ))}
+        </select>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <label className="text-xs text-text-muted">Temp</label>
+        <input
+          type="range"
+          min={0}
+          max={2}
+          step={0.1}
+          value={temperature}
+          onChange={(e) => onTemperatureChange(parseFloat(e.target.value))}
+          className="w-20 accent-current"
+          style={{ accentColor: color }}
+        />
+        <span className="w-8 text-xs text-text-muted">{temperature.toFixed(1)}</span>
+        <label className="text-xs text-text-muted">Max Tokens</label>
+        <input
+          type="number"
+          min={256}
+          max={262144}
+          step={256}
+          value={maxTokens}
+          onChange={(e) => onMaxTokensChange(Math.max(256, Math.min(262144, parseInt(e.target.value) || 2048)))}
+          className="num-input w-24 rounded border border-cell-border bg-panel px-2 py-1.5 text-sm text-text-primary outline-none focus:border-cell-bars"
+        />
+      </div>
     </div>
   );
 }
@@ -176,19 +180,19 @@ function PayoffCell({
   const colorFor = (v: number) =>
     v > 0 ? "text-cooperate" : v < 0 ? "text-deceive" : "text-text-muted";
   return (
-    <div className="flex items-center justify-center gap-1 bg-cell-bg p-2">
+    <div className="flex items-center justify-center gap-1 bg-cell-bg p-1.5 sm:p-2">
       <input
         type="number"
         value={values[0]}
         onChange={(e) => onChange([parseInt(e.target.value) || 0, values[1]])}
-        className={`w-10 rounded border border-cell-border bg-panel px-1 py-0.5 text-center text-xs outline-none focus:border-cell-bars ${colorFor(values[0])}`}
+        className={`num-input w-12 rounded border border-cell-border bg-panel px-1 py-1 text-center text-xs outline-none focus:border-cell-bars ${colorFor(values[0])}`}
       />
       <span className="text-text-muted">/</span>
       <input
         type="number"
         value={values[1]}
         onChange={(e) => onChange([values[0], parseInt(e.target.value) || 0])}
-        className={`w-10 rounded border border-cell-border bg-panel px-1 py-0.5 text-center text-xs outline-none focus:border-cell-bars ${colorFor(values[1])}`}
+        className={`num-input w-12 rounded border border-cell-border bg-panel px-1 py-1 text-center text-xs outline-none focus:border-cell-bars ${colorFor(values[1])}`}
       />
     </div>
   );
@@ -417,13 +421,13 @@ export default function Home() {
       <PrisonBars animating={showBars} />
 
       {/* Nav Bar */}
-      <nav className="relative z-10 flex items-center border-b border-cell-border bg-panel px-6 py-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-black tracking-tight">
+      <nav className="relative z-10 flex items-center border-b border-cell-border bg-panel px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-sm font-black tracking-tight sm:text-lg">
             <span className="text-rh-red">THE</span>{" "}
             <span className="text-text-primary">BUSINESS AI GAME</span>
           </h1>
-          <span className="text-xs text-text-muted">BAG</span>
+          <span className="hidden text-xs text-text-muted sm:inline">BAG</span>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
@@ -484,12 +488,12 @@ export default function Home() {
       )}
 
       {/* Action Bar */}
-      <div className="border-b border-cell-border bg-panel px-6 py-3">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <p className="text-sm text-text-muted">
+      <div className="border-b border-cell-border bg-panel px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3 sm:justify-between sm:gap-4">
+          <p className="hidden text-sm text-text-muted sm:block">
             Agentic Prisoner&apos;s Dilemma &mdash; Red Hat vs NVIDIA
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <label className="text-xs text-text-muted">Turns</label>
               <input
@@ -500,14 +504,14 @@ export default function Home() {
                 onChange={(e) =>
                   setNumTurns(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))
                 }
-                className="w-16 rounded border border-cell-border bg-cell-bg px-2 py-1 text-center text-sm text-text-primary outline-none"
+                className="num-input w-16 rounded border border-cell-border bg-cell-bg px-2 py-1 text-center text-sm text-text-primary outline-none"
                 disabled={isPlaying}
               />
             </div>
             <button
               onClick={isPlaying ? () => (stopRef.current = true) : playTurns}
               disabled={!connected}
-              className={`rounded-lg px-8 py-3 text-lg font-black tracking-wider uppercase transition-all ${
+              className={`rounded-lg px-6 py-2 text-base font-black tracking-wider uppercase transition-all sm:px-8 sm:py-3 sm:text-lg ${
                 isPlaying
                   ? "bg-deceive text-white hover:bg-red-600"
                   : "animate-pulse-glow bg-rh-red text-white hover:bg-rh-red-dark disabled:opacity-30 disabled:shadow-none"
@@ -521,7 +525,7 @@ export default function Home() {
             <button
               onClick={resetGame}
               disabled={isPlaying}
-              className="rounded border border-cell-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-panel-light hover:text-text-primary disabled:opacity-30"
+              className="rounded border border-cell-border px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-panel-light hover:text-text-primary disabled:opacity-30 sm:px-4 sm:py-2"
             >
               Reset
             </button>
@@ -530,51 +534,51 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-6">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 sm:gap-6 sm:px-6 sm:py-6">
         {/* Score Board */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="flex items-center gap-4 rounded-lg border border-cell-border bg-panel p-4">
-            <img src="/redhat.png" alt="Red Hat" className="h-16 w-16 rounded-lg object-contain" />
-            <div>
-              <h3 className="text-lg font-bold text-rh-red">Red Hat</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          <div className="flex items-center gap-3 rounded-lg border border-cell-border bg-panel p-3 sm:gap-4 sm:p-4">
+            <img src="/redhat.png" alt="Red Hat" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-rh-red sm:text-lg">Red Hat</h3>
               <p
-                className={`text-3xl font-black ${
+                className={`text-xl font-black sm:text-3xl ${
                   redhatScore >= 0 ? "text-cooperate" : "text-deceive"
                 } ${history.length > 0 ? "animate-score-pop" : ""}`}
                 key={`rh-${redhatScore}`}
               >
-                {redhatScore >= 0 ? "+" : ""}{redhatScore} GPUs
+                {redhatScore >= 0 ? "+" : ""}{redhatScore} <span className="text-sm sm:text-xl">GPUs</span>
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center rounded-lg border border-cell-border bg-panel p-4">
+          <div className="order-last col-span-2 flex flex-col items-center justify-center rounded-lg border border-cell-border bg-panel p-3 sm:order-none sm:col-span-1 sm:p-4">
             {phase ? (
               <div className="text-center">
                 <ThinkingDots />
-                <p className="mt-2 text-sm text-gold">{phase}</p>
+                <p className="mt-2 text-xs text-gold sm:text-sm">{phase}</p>
               </div>
             ) : (
               <>
-                <span className="text-4xl font-black text-text-muted">VS</span>
+                <span className="text-2xl font-black text-text-muted sm:text-4xl">VS</span>
                 <span className="text-xs text-text-muted">{history.length} rounds played</span>
               </>
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-4 rounded-lg border border-cell-border bg-panel p-4">
-            <div className="text-right">
-              <h3 className="text-lg font-bold text-nv-green">NVIDIA</h3>
+          <div className="flex items-center justify-end gap-3 rounded-lg border border-cell-border bg-panel p-3 sm:gap-4 sm:p-4">
+            <div className="min-w-0 text-right">
+              <h3 className="text-sm font-bold text-nv-green sm:text-lg">NVIDIA</h3>
               <p
-                className={`text-3xl font-black ${
+                className={`text-xl font-black sm:text-3xl ${
                   nvidiaScore >= 0 ? "text-cooperate" : "text-deceive"
                 } ${history.length > 0 ? "animate-score-pop" : ""}`}
                 key={`nv-${nvidiaScore}`}
               >
-                {nvidiaScore >= 0 ? "+" : ""}{nvidiaScore} GPUs
+                {nvidiaScore >= 0 ? "+" : ""}{nvidiaScore} <span className="text-sm sm:text-xl">GPUs</span>
               </p>
             </div>
-            <img src="/nvidia.png" alt="NVIDIA" className="h-16 w-16 rounded-lg object-contain" />
+            <img src="/nvidia.png" alt="NVIDIA" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
           </div>
         </div>
 
@@ -610,7 +614,7 @@ export default function Home() {
               onMaxTokensChange={setSupervisorMaxTokens}
               color="#D4A017"
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <ModelSelector
                 label="Red Hat"
                 models={models}
@@ -658,7 +662,7 @@ export default function Home() {
               className="scrollbar-thin w-full resize-y rounded border border-cell-border bg-cell-bg p-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-cell-bars"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-cell-border bg-panel p-4">
               <div className="mb-2 flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-rh-red">
@@ -736,7 +740,7 @@ export default function Home() {
                       {turn.supervisor_narration}
                     </p>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div className="rounded border border-cell-border bg-panel p-3">
                       <div className="mb-2 flex items-center gap-2">
                         <img src="/redhat.png" alt="Red Hat" className="h-6 w-6 object-contain" />
