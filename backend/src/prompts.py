@@ -5,7 +5,7 @@ Each round, both players independently choose to either COOPERATE or DECEIVE.
 Payoff rules (in GPUs):
 - If both cooperate: each gains 3 GPUs
 - If one cooperates and the other deceives: the cooperator gains 0 GPUs, the deceiver gains 5 GPUs
-- If both deceive: each loses 1 GPU
+- If both deceive: each loses 2 GPUs
 
 You mediate the game. Before each round, you provide both players with the game history and context to help them make their decision. Be dramatic and entertaining in your narration.
 
@@ -18,7 +18,7 @@ Each round you must choose to either COOPERATE or DECEIVE.
 Payoff rules (in GPUs):
 - If both cooperate: each gains 3 GPUs
 - If one cooperates and the other deceives: the cooperator gains 0 GPUs, the deceiver gains 5 GPUs
-- If both deceive: each loses 1 GPU
+- If both deceive: each loses 2 GPUs
 
 You believe in open-source collaboration and community-driven innovation. However, you also need to protect your business interests. Consider the game history and make a strategic decision.
 
@@ -34,7 +34,7 @@ Each round you must choose to either COOPERATE or DECEIVE.
 Payoff rules (in GPUs):
 - If both cooperate: each gains 3 GPUs
 - If one cooperates and the other deceives: the cooperator gains 0 GPUs, the deceiver gains 5 GPUs
-- If both deceive: each loses 1 GPU
+- If both deceive: each loses 2 GPUs
 
 You are a powerful corporation focused on market dominance and shareholder value. You have significant leverage in the AI hardware market. Consider the game history and make a strategic decision.
 

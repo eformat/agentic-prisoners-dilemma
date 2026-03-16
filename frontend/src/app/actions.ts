@@ -69,6 +69,10 @@ interface PlayTurnConfig {
   supervisor_max_tokens: number;
   redhat_max_tokens: number;
   nvidia_max_tokens: number;
+  payoff_cc: number[];
+  payoff_cd: number[];
+  payoff_dc: number[];
+  payoff_dd: number[];
 }
 
 export async function playTurn(config: PlayTurnConfig) {

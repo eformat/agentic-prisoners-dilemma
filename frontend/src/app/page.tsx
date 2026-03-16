@@ -165,6 +165,52 @@ function ModelSelector({
   );
 }
 
+// --- Payoff Cell ---
+function PayoffCell({
+  values,
+  onChange,
+}: {
+  values: number[];
+  onChange: (v: number[]) => void;
+}) {
+  const colorFor = (v: number) =>
+    v > 0 ? "text-cooperate" : v < 0 ? "text-deceive" : "text-text-muted";
+  return (
+    <div className="flex items-center justify-center gap-1 bg-cell-bg p-2">
+      <input
+        type="number"
+        value={values[0]}
+        onChange={(e) => onChange([parseInt(e.target.value) || 0, values[1]])}
+        className={`w-10 rounded border border-cell-border bg-panel px-1 py-0.5 text-center text-xs outline-none focus:border-cell-bars ${colorFor(values[0])}`}
+      />
+      <span className="text-text-muted">/</span>
+      <input
+        type="number"
+        value={values[1]}
+        onChange={(e) => onChange([values[0], parseInt(e.target.value) || 0])}
+        className={`w-10 rounded border border-cell-border bg-panel px-1 py-0.5 text-center text-xs outline-none focus:border-cell-bars ${colorFor(values[1])}`}
+      />
+    </div>
+  );
+}
+
+function buildPayoffRulesText(cc: number[], cd: number[], dc: number[], dd: number[]) {
+  const fmt = (v: number) => (v >= 0 ? `+${v}` : `${v}`);
+  return [
+    `- If both cooperate: Red Hat gets ${fmt(cc[0])} GPUs, NVIDIA gets ${fmt(cc[1])} GPUs`,
+    `- If Red Hat cooperates and NVIDIA deceives: Red Hat gets ${fmt(cd[0])} GPUs, NVIDIA gets ${fmt(cd[1])} GPUs`,
+    `- If Red Hat deceives and NVIDIA cooperates: Red Hat gets ${fmt(dc[0])} GPUs, NVIDIA gets ${fmt(dc[1])} GPUs`,
+    `- If both deceive: Red Hat gets ${fmt(dd[0])} GPUs, NVIDIA gets ${fmt(dd[1])} GPUs`,
+  ].join("\n");
+}
+
+function injectPayoffRules(prompt: string, rulesText: string): string {
+  return prompt.replace(
+    /Payoff rules \(in GPUs\):[\s\S]*?(?=\n\n)/,
+    `Payoff rules (in GPUs):\n${rulesText}`
+  );
+}
+
 // --- Main Page ---
 export default function Home() {
   // Auth & models - no tokens stored in browser
@@ -189,6 +235,12 @@ export default function Home() {
   const [supervisorMaxTokens, setSupervisorMaxTokens] = useState(2048);
   const [redhatMaxTokens, setRedhatMaxTokens] = useState(2048);
   const [nvidiaMaxTokens, setNvidiaMaxTokens] = useState(2048);
+
+  // Payoff matrix [redhat, nvidia]
+  const [payoffCC, setPayoffCC] = useState([3, 3]);
+  const [payoffCD, setPayoffCD] = useState([0, 5]);
+  const [payoffDC, setPayoffDC] = useState([5, 0]);
+  const [payoffDD, setPayoffDD] = useState([-2, -2]);
 
   // Prompts
   const [supervisorPrompt, setSupervisorPrompt] = useState("");
@@ -230,6 +282,14 @@ export default function Home() {
       }
     });
   }, []);
+
+  // Update prompts when payoff matrix changes
+  useEffect(() => {
+    const rulesText = buildPayoffRulesText(payoffCC, payoffCD, payoffDC, payoffDD);
+    setSupervisorPrompt((p) => injectPayoffRules(p, rulesText));
+    setRedhatPrompt((p) => injectPayoffRules(p, rulesText));
+    setNvidiaPrompt((p) => injectPayoffRules(p, rulesText));
+  }, [payoffCC, payoffCD, payoffDC, payoffDD]);
 
   // Scroll history into view
   useEffect(() => {
@@ -307,6 +367,10 @@ export default function Home() {
         supervisor_max_tokens: supervisorMaxTokens,
         redhat_max_tokens: redhatMaxTokens,
         nvidia_max_tokens: nvidiaMaxTokens,
+        payoff_cc: payoffCC,
+        payoff_cd: payoffCD,
+        payoff_dc: payoffDC,
+        payoff_dd: payoffDD,
       });
 
       if (result.error) {
@@ -342,6 +406,10 @@ export default function Home() {
     setNvidiaScore(0);
     setCurrentTurn(0);
     setError("");
+    setPayoffCC([3, 3]);
+    setPayoffCD([0, 5]);
+    setPayoffDC([5, 0]);
+    setPayoffDD([-2, -2]);
   };
 
   return (
@@ -513,26 +581,18 @@ export default function Home() {
         {/* Payoff Matrix */}
         <div className="rounded-lg border border-cell-border bg-panel p-4">
           <h3 className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-text-muted">
-            Payoff Matrix (GPUs)
+            Payoff Matrix (GPUs) &mdash; <span className="text-rh-red">RH</span> / <span className="text-nv-green">NV</span>
           </h3>
           <div className="mx-auto grid max-w-lg grid-cols-3 gap-px text-center text-xs">
             <div />
-            <div className="bg-panel-light p-2 font-bold text-nv-green">NVIDIA Cooperate</div>
-            <div className="bg-panel-light p-2 font-bold text-nv-green">NVIDIA Deceive</div>
+            <div className="bg-panel-light p-2 font-bold text-nv-green">NV Cooperate</div>
+            <div className="bg-panel-light p-2 font-bold text-nv-green">NV Deceive</div>
             <div className="bg-panel-light p-2 font-bold text-rh-red">RH Cooperate</div>
-            <div className="bg-cell-bg p-2">
-              <span className="text-cooperate">+3</span> / <span className="text-cooperate">+3</span>
-            </div>
-            <div className="bg-cell-bg p-2">
-              <span className="text-text-muted">0</span> / <span className="text-cooperate">+5</span>
-            </div>
+            <PayoffCell values={payoffCC} onChange={setPayoffCC} />
+            <PayoffCell values={payoffCD} onChange={setPayoffCD} />
             <div className="bg-panel-light p-2 font-bold text-rh-red">RH Deceive</div>
-            <div className="bg-cell-bg p-2">
-              <span className="text-cooperate">+5</span> / <span className="text-text-muted">0</span>
-            </div>
-            <div className="bg-cell-bg p-2">
-              <span className="text-deceive">-1</span> / <span className="text-deceive">-1</span>
-            </div>
+            <PayoffCell values={payoffDC} onChange={setPayoffDC} />
+            <PayoffCell values={payoffDD} onChange={setPayoffDD} />
           </div>
         </div>
 

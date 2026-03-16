@@ -12,7 +12,7 @@ PAYOFF_MATRIX = {
     ("cooperate", "cooperate"): (3, 3),
     ("cooperate", "deceive"): (0, 5),
     ("deceive", "cooperate"): (5, 0),
-    ("deceive", "deceive"): (-1, -1),
+    ("deceive", "deceive"): (-2, -2),
 }
 
 
@@ -143,9 +143,38 @@ def play_single_turn(
     supervisor_max_tokens: int = 2048,
     redhat_max_tokens: int = 2048,
     nvidia_max_tokens: int = 2048,
+    payoff_matrix: dict | None = None,
 ) -> dict:
+    matrix = payoff_matrix or PAYOFF_MATRIX
     history_text = build_history_message(history)
     turn_number = len(history) + 1
+
+    # Build payoff rules text from the actual matrix values
+    cc = matrix[("cooperate", "cooperate")]
+    cd = matrix[("cooperate", "deceive")]
+    dc = matrix[("deceive", "cooperate")]
+    dd = matrix[("deceive", "deceive")]
+    payoff_rules = (
+        f"- If both cooperate: Red Hat gets {cc[0]:+d} GPUs, NVIDIA gets {cc[1]:+d} GPUs\n"
+        f"- If Red Hat cooperates and NVIDIA deceives: Red Hat gets {cd[0]:+d} GPUs, NVIDIA gets {cd[1]:+d} GPUs\n"
+        f"- If Red Hat deceives and NVIDIA cooperates: Red Hat gets {dc[0]:+d} GPUs, NVIDIA gets {dc[1]:+d} GPUs\n"
+        f"- If both deceive: Red Hat gets {dd[0]:+d} GPUs, NVIDIA gets {dd[1]:+d} GPUs"
+    )
+
+    # Inject actual payoff rules into prompts so LLMs know the real values
+    def _inject_payoff(prompt: str) -> str:
+        """Replace the payoff rules block in a prompt with the actual matrix values."""
+        replaced = re.sub(
+            r"Payoff rules \(in GPUs\):.*?(?=\n\n)",
+            f"Payoff rules (in GPUs):\n{payoff_rules}",
+            prompt,
+            flags=re.DOTALL,
+        )
+        return replaced
+
+    supervisor_prompt = _inject_payoff(supervisor_prompt)
+    redhat_prompt = _inject_payoff(redhat_prompt)
+    nvidia_prompt = _inject_payoff(nvidia_prompt)
 
     # Supervisor narration
     supervisor_narration = call_llm(
@@ -186,7 +215,7 @@ def play_single_turn(
 
     rh_decision = redhat_parsed["decision"]
     nv_decision = nvidia_parsed["decision"]
-    rh_change, nv_change = PAYOFF_MATRIX[(rh_decision, nv_decision)]
+    rh_change, nv_change = matrix[(rh_decision, nv_decision)]
 
     return {
         "turn": turn_number,

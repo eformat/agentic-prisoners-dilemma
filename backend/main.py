@@ -85,6 +85,11 @@ class TurnRequest(BaseModel):
     supervisor_max_tokens: int = 2048
     redhat_max_tokens: int = 2048
     nvidia_max_tokens: int = 2048
+    # Payoff matrix values: (redhat_score, nvidia_score)
+    payoff_cc: list[int] = [3, 3]      # both cooperate
+    payoff_cd: list[int] = [0, 5]      # RH cooperate, NV deceive
+    payoff_dc: list[int] = [5, 0]      # RH deceive, NV cooperate
+    payoff_dd: list[int] = [-2, -2]    # both deceive
 
 
 @app.get("/api/health")
@@ -137,6 +142,12 @@ def play_turn(req: TurnRequest):
     if not _maas_token:
         raise HTTPException(status_code=401, detail="Not connected")
     try:
+        payoff_matrix = {
+            ("cooperate", "cooperate"): (req.payoff_cc[0], req.payoff_cc[1]),
+            ("cooperate", "deceive"): (req.payoff_cd[0], req.payoff_cd[1]),
+            ("deceive", "cooperate"): (req.payoff_dc[0], req.payoff_dc[1]),
+            ("deceive", "deceive"): (req.payoff_dd[0], req.payoff_dd[1]),
+        }
         result = play_single_turn(
             history=req.history,
             supervisor_prompt=req.supervisor_prompt,
@@ -155,6 +166,7 @@ def play_turn(req: TurnRequest):
             supervisor_max_tokens=req.supervisor_max_tokens,
             redhat_max_tokens=req.redhat_max_tokens,
             nvidia_max_tokens=req.nvidia_max_tokens,
+            payoff_matrix=payoff_matrix,
         )
         return result
     except Exception as e:
