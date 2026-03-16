@@ -1,150 +1,96 @@
-# agent prisoners dilema
+# Agentic Prisoner’s Dilemma
 
-Agentic game based on prisoners dilemma.
+Agentic game based on the prisoner’s dilemma. The two players are "Red Hat" and "NVIDIA".
 
-The two players are "Red Hat" and "NVIDIA".
+## Architecture
 
-## architecture
+- **Frontend**: Next.js (standalone mode) with Server Actions for secure backend communication
+- **Backend**: Python/FastAPI with OpenAI-compatible API calls to MaaS-hosted models
+- **Deployment**: Helm chart for OpenShift with auto-connect from BEARER env var
 
-we have a frontend (node.js/next.js) and a backend (python).
+### Key files
 
-base the backend agent architecture on /home/mike/git/voice-agents/ai-voice-agent/backend/src/
+- `backend/main.py` — FastAPI server, API endpoints, stores MaaS token server-side
+- `backend/src/game.py` — Game logic, LLM calls, payoff calculation, thinking-tag stripping
+- `backend/src/prompts.py` — Default system prompts for supervisor, Red Hat, NVIDIA agents
+- `frontend/src/app/page.tsx` — Main UI component
+- `frontend/src/app/actions.ts` — Next.js Server Actions (all backend calls go through here, never from browser)
+- `deploy/chart/` — Helm chart for OpenShift deployment
 
-base the frontend ui on /home/mike/git/voice-agents/ai-voice-agent/frontend
+### Security
 
-## gameplay
+- Bearer token is **never** sent to the browser. It is stored server-side in the backend.
+- All frontend-to-backend communication uses Next.js Server Actions (`"use server"`).
+- On OpenShift, auto-connect uses the `BEARER` env var from a Kubernetes Secret.
+- Controls panel (manual token entry) is hidden when not running on localhost.
 
-Red Hat and Nvidia are locked in a prisoners dilemma and must decide if they wish to co-operate in the high stakes game of "The Business AI Game (BAG)".
+## Gameplay
+
+Red Hat and NVIDIA are locked in a prisoner’s dilemma in "The Business AI Game (BAG)".
 
 Each player chooses whether to "cooperate" or "deceive".
 
-The prizes are valued in "numbers of GPUs"
+### Payoff matrix (configurable in UI)
 
-This leads to three different possible outcomes for the players Red Hat and Nvidia:
+Default values (in GPUs):
 
-If Red Hat and NVIDIA both choose to deceive, neither of them get a GPU.
-If one choose to cooperate but the other doesn’t, the one cooperating gets nothing while the other looses a GPU.
-If Red Hat and NVIDIA both deceive each other, they will each loose 2 GPUs.
+| | NV Cooperate | NV Deceive |
+|---|---|---|
+| **RH Cooperate** | +3 / +3 | 0 / +5 |
+| **RH Deceive** | +5 / 0 | -2 / -2 |
 
-## ui
+- The payoff matrix is **editable in the UI** — each cell has number inputs
+- When payoff values change, the "Payoff rules" section in all three prompts (supervisor, Red Hat, NVIDIA) is **automatically updated** to match
+- The backend also injects the actual payoff values into prompts before sending to the LLM, as a safety net
+- Reset button restores the matrix to defaults
 
-There should be 3 text boxes containing the prompts.
+## UI
 
----------------------------
-|  supervisor prompt      |
----------------------------
+### Layout
 
----------------------------  ---------------------------  
-|  Red Hat prompt         |  |  NVIDIA prompt          |
----------------------------  ---------------------------
+- **Nav bar**: Connection status, Controls toggle (localhost only)
+- **Action bar**: Turns selector (1-100), Start Game / Stop button, Reset button
+- **Score board**: Red Hat and NVIDIA scores with logos (redhat.png, nvidia.png)
+- **Payoff matrix**: Editable grid showing RH/NV scores for each outcome
+- **Model selectors**: Per-agent (supervisor, Red Hat, NVIDIA) with:
+  - LLM model dropdown (fetched from MaaS API)
+  - Temperature slider (0-2)
+  - Max output tokens input (256-262144, default 2048)
+- **Prompt editors**: 3 text areas (supervisor, Red Hat, NVIDIA) with per-prompt Reset buttons
+- **Game history**: Scrollable list of rounds with supervisor narration, decisions, reasoning
 
-That way each turn can have the prompt changed.
+### Per-agent controls
 
-There should be a Score for each player - number of GPUs.
+Each agent (supervisor, Red Hat, NVIDIA) has:
+- **Model selector** — dropdown of available MaaS models
+- **Temperature** — slider 0.0-2.0 (wired into LLM call)
+- **Max tokens** — output token limit (important for thinking models like kimi-k25 that use tokens for `<think>` reasoning)
 
-Add a big "Start Turn" at the top of the screen that plays one turn.
+### Thinking model support
 
-Each agent (supervisor, redhat, nvidia) should have an LLM Model Selector. The models and token are gotten using the equivalent of these commands.
+Models like Qwen3.5-9B and kimi-k25 emit `<think>...</think>` tags or "Thinking Process:" preambles. The backend strips these via `_strip_thinking()` in `game.py` before using the output. The `max_tokens` control is important — thinking models need higher limits (e.g. 8192+) since reasoning tokens count toward the budget.
 
-```bash
-HOST=https://maas.apps.ocp.cloud.rhai-tmm.dev
+## MaaS API
 
-TOKEN_RESPONSE=$(curl -sSk \
-  -H "Authorization: Bearer $BEARER" \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d '{"expiration": "720h"}' \
-  "${HOST}/maas-api/v1/tokens") && \
-TOKEN=$(echo $TOKEN_RESPONSE | jq -r .token) && \
-echo "Token obtained: ${TOKEN:0:20}..."
+Models and tokens are obtained from `https://maas.apps.ocp.cloud.rhai-tmm.dev`. The backend uses the vLLM-compatible OpenAI API. Model serving names are extracted from the URL path (last segment), not the HuggingFace model ID.
 
-MODELS=$(curl -sSk ${HOST}/maas-api/v1/models \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $TOKEN" | jq -r .) && \
-echo $MODELS | jq .
-```
-
-The output looks like:
+## Running locally
 
 ```bash
-Token obtained: eyJhbGciOiJSUzI1NiIs...
-{
-  "data": [
-    {
-      "id": "llama-4-scout-17b-16e-w4a16",
-      "created": 1773209690,
-      "object": "model",
-      "owned_by": "prelude-maas",
-      "url": "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/llama-4-scout-17b-16e-w4a16",
-      "ready": true,
-      "modelDetails": {
-        "displayName": "Llama-4-Scout-17B-16E-W4A16"
-      }
-    },
-    {
-      "id": "Qwen/Qwen3.5-9B",
-      "created": 1772938823,
-      "object": "model",
-      "owned_by": "prelude-maas",
-      "url": "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/qwen35-9b",
-      "ready": true,
-      "modelDetails": {
-        "displayName": "qwen35-9b"
-      }
-    },
-    {
-      "id": "RedHatAI/Qwen2.5-VL-7B-Instruct-FP8-Dynamic",
-      "created": 1772939058,
-      "object": "model",
-      "owned_by": "prelude-maas",
-      "url": "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/qwen25-vl-7b-instruct-fp8",
-      "ready": true,
-      "modelDetails": {
-        "displayName": "qwen25-vl-7b-instruct-fp8"
-      }
-    },
-    {
-      "id": "ibm-granite/granite-vision-3.2-2b",
-      "created": 1772939058,
-      "object": "model",
-      "owned_by": "prelude-maas",
-      "url": "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/granite-vision-32-2b",
-      "ready": true,
-      "modelDetails": {
-        "displayName": "granite-vision-3.2-2b"
-      }
-    },
-    {
-      "id": "RedHatAI/llama-3.2-3b-instruct",
-      "created": 1773096678,
-      "object": "model",
-      "owned_by": "prelude-maas",
-      "url": "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/llama-32-3b",
-      "ready": true,
-      "modelDetails": {
-        "displayName": "Llama 3.2 3B Instruct"
-      }
-    },
-    {
-      "id": "kimi-k2-5",
-      "created": 1773272044,
-      "object": "model",
-      "owned_by": "kimi-k25",
-      "url": "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5",
-      "ready": true,
-      "modelDetails": {
-        "displayName": "kimi-k2-5"
-      }
-    }
-  ],
-  "object": "list"
-}
+# Start both backend and frontend
+./run.sh
+
+# Or separately:
+cd backend && BEARER=<token> uvicorn main:app --host 0.0.0.0 --port 8000
+cd frontend && npm run dev
 ```
 
-Use the nvidia.png and redhat.png in the UI for displaying each agent.
+## Building and deploying
 
-Generate some cool prisoner like graphics that animate when each tunr is taken.
+```bash
+make podman-build-all    # Build container images
+make podman-push-all     # Push to quay.io
+make helm-deploy         # Deploy to OpenShift
+```
 
-Add a selector so that the number of turns can be input e.g. 1-100, and keep score as each turn progressses.
-
-Add temperature (wired into the LLM prompt) as a control for each agent.
+Images: `quay.io/eformat/prisoners-dilemma-backend:latest` and `quay.io/eformat/prisoners-dilemma-frontend:latest`
