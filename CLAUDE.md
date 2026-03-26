@@ -50,7 +50,7 @@ Default values (in GPUs):
 
 - **Nav bar**: Connection status, Controls toggle (localhost only)
 - **Action bar**: Turns selector (1-100), Start Game / Stop button, Reset button
-- **Score board**: Crimson Dynamics and Verdant Systems scores with logos (crimson.png, verdant.png)
+- **Score board**: Crimson Dynamics and Verdant Systems scores with inline SVG logos
 - **Payoff matrix**: Editable grid showing CD/VS scores for each outcome
 - **Model selectors**: Per-agent (supervisor, Crimson Dynamics, Verdant Systems) with:
   - LLM model dropdown (fetched from MaaS API)

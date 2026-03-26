@@ -32,6 +32,44 @@ interface TurnResult {
   verdant_score_change: number;
 }
 
+// --- Corporation Logos ---
+function CrimsonLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="cr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF2222" />
+          <stop offset="100%" stopColor="#AA0000" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="56" height="56" rx="12" fill="#1A0000" stroke="#EE0000" strokeWidth="2" />
+      <polygon points="20,16 36,16 24,48 8,48" fill="url(#cr-grad)" />
+      <polygon points="30,16 56,16 56,28 38,28" fill="url(#cr-grad)" />
+      <polygon points="28,32 52,32 52,48 36,48" fill="url(#cr-grad)" opacity="0.8" />
+      <rect x="42" y="12" width="4" height="40" rx="2" fill="#FF4444" transform="rotate(15 44 32)" opacity="0.6" />
+    </svg>
+  );
+}
+
+function VerdantLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="vd-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#8ED100" />
+          <stop offset="100%" stopColor="#5A8F00" />
+        </linearGradient>
+      </defs>
+      <polygon points="32,2 58,17 58,47 32,62 6,47 6,17" fill="#0A1A00" stroke="#76B900" strokeWidth="2" />
+      <polygon points="14,22 28,22 20,42" fill="url(#vd-grad)" />
+      <polygon points="24,22 38,22 30,42" fill="url(#vd-grad)" opacity="0.7" />
+      <path d="M36,24 L42,24 Q50,24 50,30 Q50,34 42,34 L40,34 Q48,34 48,40 Q48,44 40,44 L34,44" fill="none" stroke="url(#vd-grad)" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="50" cy="14" r="2" fill="#76B900" opacity="0.5" />
+      <circle cx="14" cy="50" r="2" fill="#76B900" opacity="0.5" />
+    </svg>
+  );
+}
+
 // --- Prison Bars SVG ---
 function PrisonBars({ animating }: { animating: boolean }) {
   return (
@@ -538,7 +576,7 @@ export default function Home() {
         {/* Score Board */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="flex items-center gap-3 rounded-lg border border-cell-border bg-panel p-3 sm:gap-4 sm:p-4">
-            <img src="/crimson.png" alt="Crimson Dynamics" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
+            <CrimsonLogo className="h-10 w-10 sm:h-16 sm:w-16" />
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-cr-red sm:text-lg">Crimson Dynamics</h3>
               <p
@@ -578,7 +616,7 @@ export default function Home() {
                 {verdantScore >= 0 ? "+" : ""}{verdantScore} <span className="text-sm sm:text-xl">GPUs</span>
               </p>
             </div>
-            <img src="/verdant.png" alt="Verdant Systems" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
+            <VerdantLogo className="h-10 w-10 sm:h-16 sm:w-16" />
           </div>
         </div>
 
@@ -743,7 +781,7 @@ export default function Home() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div className="rounded border border-cell-border bg-panel p-3">
                       <div className="mb-2 flex items-center gap-2">
-                        <img src="/crimson.png" alt="Crimson Dynamics" className="h-6 w-6 object-contain" />
+                        <CrimsonLogo className="h-6 w-6" />
                         <span className="text-sm font-bold text-cr-red">Crimson Dynamics</span>
                       </div>
                       <DecisionStamp decision={turn.crimson_decision} />
@@ -751,7 +789,7 @@ export default function Home() {
                     </div>
                     <div className="rounded border border-cell-border bg-panel p-3">
                       <div className="mb-2 flex items-center gap-2">
-                        <img src="/verdant.png" alt="Verdant Systems" className="h-6 w-6 object-contain" />
+                        <VerdantLogo className="h-6 w-6" />
                         <span className="text-sm font-bold text-vd-green">Verdant Systems</span>
                       </div>
                       <DecisionStamp decision={turn.verdant_decision} />
