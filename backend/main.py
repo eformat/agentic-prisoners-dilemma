@@ -8,9 +8,9 @@ from pydantic import BaseModel
 
 from src.game import play_single_turn
 from src.prompts import (
-    DEFAULT_NVIDIA_PROMPT,
-    DEFAULT_REDHAT_PROMPT,
+    DEFAULT_CRIMSON_PROMPT,
     DEFAULT_SUPERVISOR_PROMPT,
+    DEFAULT_VERDANT_PROMPT,
 )
 
 MAAS_HOST = os.getenv("MAAS_HOST", "https://maas.apps.ocp.cloud.rhai-tmm.dev")
@@ -71,24 +71,24 @@ class ConnectRequest(BaseModel):
 class TurnRequest(BaseModel):
     history: list[dict] = []
     supervisor_prompt: str = DEFAULT_SUPERVISOR_PROMPT
-    redhat_prompt: str = DEFAULT_REDHAT_PROMPT
-    nvidia_prompt: str = DEFAULT_NVIDIA_PROMPT
+    crimson_prompt: str = DEFAULT_CRIMSON_PROMPT
+    verdant_prompt: str = DEFAULT_VERDANT_PROMPT
     supervisor_model_url: str = ""
     supervisor_model_id: str = ""
-    redhat_model_url: str = ""
-    redhat_model_id: str = ""
-    nvidia_model_url: str = ""
-    nvidia_model_id: str = ""
+    crimson_model_url: str = ""
+    crimson_model_id: str = ""
+    verdant_model_url: str = ""
+    verdant_model_id: str = ""
     supervisor_temp: float = 0.7
-    redhat_temp: float = 0.7
-    nvidia_temp: float = 0.7
+    crimson_temp: float = 0.7
+    verdant_temp: float = 0.7
     supervisor_max_tokens: int = 2048
-    redhat_max_tokens: int = 2048
-    nvidia_max_tokens: int = 2048
-    # Payoff matrix values: (redhat_score, nvidia_score)
+    crimson_max_tokens: int = 2048
+    verdant_max_tokens: int = 2048
+    # Payoff matrix values: (crimson_score, verdant_score)
     payoff_cc: list[int] = [3, 3]      # both cooperate
-    payoff_cd: list[int] = [0, 5]      # RH cooperate, NV deceive
-    payoff_dc: list[int] = [5, 0]      # RH deceive, NV cooperate
+    payoff_cd: list[int] = [0, 5]      # Crimson cooperate, Verdant deceive
+    payoff_dc: list[int] = [5, 0]      # Crimson deceive, Verdant cooperate
     payoff_dd: list[int] = [-2, -2]    # both deceive
 
 
@@ -151,21 +151,21 @@ def play_turn(req: TurnRequest):
         result = play_single_turn(
             history=req.history,
             supervisor_prompt=req.supervisor_prompt,
-            redhat_prompt=req.redhat_prompt,
-            nvidia_prompt=req.nvidia_prompt,
+            crimson_prompt=req.crimson_prompt,
+            verdant_prompt=req.verdant_prompt,
             supervisor_model_url=req.supervisor_model_url,
             supervisor_model_id=req.supervisor_model_id,
-            redhat_model_url=req.redhat_model_url,
-            redhat_model_id=req.redhat_model_id,
-            nvidia_model_url=req.nvidia_model_url,
-            nvidia_model_id=req.nvidia_model_id,
+            crimson_model_url=req.crimson_model_url,
+            crimson_model_id=req.crimson_model_id,
+            verdant_model_url=req.verdant_model_url,
+            verdant_model_id=req.verdant_model_id,
             token=_maas_token,
             supervisor_temp=req.supervisor_temp,
-            redhat_temp=req.redhat_temp,
-            nvidia_temp=req.nvidia_temp,
+            crimson_temp=req.crimson_temp,
+            verdant_temp=req.verdant_temp,
             supervisor_max_tokens=req.supervisor_max_tokens,
-            redhat_max_tokens=req.redhat_max_tokens,
-            nvidia_max_tokens=req.nvidia_max_tokens,
+            crimson_max_tokens=req.crimson_max_tokens,
+            verdant_max_tokens=req.verdant_max_tokens,
             payoff_matrix=payoff_matrix,
         )
         return result
@@ -177,6 +177,6 @@ def play_turn(req: TurnRequest):
 async def default_prompts():
     return {
         "supervisor": DEFAULT_SUPERVISOR_PROMPT,
-        "redhat": DEFAULT_REDHAT_PROMPT,
-        "nvidia": DEFAULT_NVIDIA_PROMPT,
+        "crimson": DEFAULT_CRIMSON_PROMPT,
+        "verdant": DEFAULT_VERDANT_PROMPT,
     }

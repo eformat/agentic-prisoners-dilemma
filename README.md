@@ -1,15 +1,15 @@
 # The Business AI Game (BAG)
 
-Agentic Prisoner's Dilemma - Red Hat vs NVIDIA.
+Agentic Prisoner's Dilemma - Crimson Dynamics vs Verdant Systems.
 
 Two AI agents play a repeated prisoner's dilemma, each deciding whether to cooperate or deceive. A supervisor agent narrates the drama. All agents are powered by LLMs served via MaaS (Model as a Service).
 
 ## Payoff Matrix (GPUs)
 
-|  | NVIDIA Cooperate | NVIDIA Deceive |
+|  | Verdant Cooperate | Verdant Deceive |
 |---|---|---|
-| **Red Hat Cooperate** | +3 / +3 | 0 / +5 |
-| **Red Hat Deceive** | +5 / 0 | -1 / -1 |
+| **Crimson Cooperate** | +3 / +3 | 0 / +5 |
+| **Crimson Deceive** | +5 / 0 | -2 / -2 |
 
 ## Architecture
 

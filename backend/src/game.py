@@ -71,14 +71,14 @@ def build_history_message(history: list[dict], max_rounds: int = 10) -> str:
         lines.append(f"  (Rounds 1-{skipped} omitted for brevity)")
     for i, turn in enumerate(recent):
         round_num = skipped + i + 1
-        rh = turn["redhat_decision"]
-        nv = turn["nvidia_decision"]
-        rh_score = turn["redhat_score_change"]
-        nv_score = turn["nvidia_score_change"]
+        cr = turn["crimson_decision"]
+        vd = turn["verdant_decision"]
+        cr_score = turn["crimson_score_change"]
+        vd_score = turn["verdant_score_change"]
         lines.append(
-            f"  Round {round_num}: Red Hat chose to {rh}, NVIDIA chose to {nv}. "
-            f"Red Hat {'gained' if rh_score >= 0 else 'lost'} {abs(rh_score)} GPUs, "
-            f"NVIDIA {'gained' if nv_score >= 0 else 'lost'} {abs(nv_score)} GPUs."
+            f"  Round {round_num}: Crimson Dynamics chose to {cr}, Verdant Systems chose to {vd}. "
+            f"Crimson Dynamics {'gained' if cr_score >= 0 else 'lost'} {abs(cr_score)} GPUs, "
+            f"Verdant Systems {'gained' if vd_score >= 0 else 'lost'} {abs(vd_score)} GPUs."
         )
     return "\n".join(lines)
 
@@ -128,21 +128,21 @@ def call_llm(
 def play_single_turn(
     history: list[dict],
     supervisor_prompt: str,
-    redhat_prompt: str,
-    nvidia_prompt: str,
+    crimson_prompt: str,
+    verdant_prompt: str,
     supervisor_model_url: str,
     supervisor_model_id: str,
-    redhat_model_url: str,
-    redhat_model_id: str,
-    nvidia_model_url: str,
-    nvidia_model_id: str,
+    crimson_model_url: str,
+    crimson_model_id: str,
+    verdant_model_url: str,
+    verdant_model_id: str,
     token: str,
     supervisor_temp: float = 0.7,
-    redhat_temp: float = 0.7,
-    nvidia_temp: float = 0.7,
+    crimson_temp: float = 0.7,
+    verdant_temp: float = 0.7,
     supervisor_max_tokens: int = 2048,
-    redhat_max_tokens: int = 2048,
-    nvidia_max_tokens: int = 2048,
+    crimson_max_tokens: int = 2048,
+    verdant_max_tokens: int = 2048,
     payoff_matrix: dict | None = None,
 ) -> dict:
     matrix = payoff_matrix or PAYOFF_MATRIX
@@ -155,10 +155,10 @@ def play_single_turn(
     dc = matrix[("deceive", "cooperate")]
     dd = matrix[("deceive", "deceive")]
     payoff_rules = (
-        f"- If both cooperate: Red Hat gets {cc[0]:+d} GPUs, NVIDIA gets {cc[1]:+d} GPUs\n"
-        f"- If Red Hat cooperates and NVIDIA deceives: Red Hat gets {cd[0]:+d} GPUs, NVIDIA gets {cd[1]:+d} GPUs\n"
-        f"- If Red Hat deceives and NVIDIA cooperates: Red Hat gets {dc[0]:+d} GPUs, NVIDIA gets {dc[1]:+d} GPUs\n"
-        f"- If both deceive: Red Hat gets {dd[0]:+d} GPUs, NVIDIA gets {dd[1]:+d} GPUs"
+        f"- If both cooperate: Crimson Dynamics gets {cc[0]:+d} GPUs, Verdant Systems gets {cc[1]:+d} GPUs\n"
+        f"- If Crimson Dynamics cooperates and Verdant Systems deceives: Crimson Dynamics gets {cd[0]:+d} GPUs, Verdant Systems gets {cd[1]:+d} GPUs\n"
+        f"- If Crimson Dynamics deceives and Verdant Systems cooperates: Crimson Dynamics gets {dc[0]:+d} GPUs, Verdant Systems gets {dc[1]:+d} GPUs\n"
+        f"- If both deceive: Crimson Dynamics gets {dd[0]:+d} GPUs, Verdant Systems gets {dd[1]:+d} GPUs"
     )
 
     # Inject actual payoff rules into prompts so LLMs know the real values
@@ -173,8 +173,8 @@ def play_single_turn(
         return replaced
 
     supervisor_prompt = _inject_payoff(supervisor_prompt)
-    redhat_prompt = _inject_payoff(redhat_prompt)
-    nvidia_prompt = _inject_payoff(nvidia_prompt)
+    crimson_prompt = _inject_payoff(crimson_prompt)
+    verdant_prompt = _inject_payoff(verdant_prompt)
 
     # Supervisor narration
     supervisor_narration = call_llm(
@@ -190,42 +190,42 @@ def play_single_turn(
     # Player decisions (could be parallel but keeping simple)
     player_context = f"Round {turn_number}.\n\n{history_text}\n\nThe supervisor says: {supervisor_narration}\n\nWhat is your decision? Respond with JSON only."
 
-    redhat_response = call_llm(
-        base_url=redhat_model_url,
+    crimson_response = call_llm(
+        base_url=crimson_model_url,
         token=token,
-        model_id=redhat_model_id,
-        system_prompt=redhat_prompt,
+        model_id=crimson_model_id,
+        system_prompt=crimson_prompt,
         user_message=player_context,
-        temperature=redhat_temp,
-        max_tokens=redhat_max_tokens,
+        temperature=crimson_temp,
+        max_tokens=crimson_max_tokens,
     )
 
-    nvidia_response = call_llm(
-        base_url=nvidia_model_url,
+    verdant_response = call_llm(
+        base_url=verdant_model_url,
         token=token,
-        model_id=nvidia_model_id,
-        system_prompt=nvidia_prompt,
+        model_id=verdant_model_id,
+        system_prompt=verdant_prompt,
         user_message=player_context,
-        temperature=nvidia_temp,
-        max_tokens=nvidia_max_tokens,
+        temperature=verdant_temp,
+        max_tokens=verdant_max_tokens,
     )
 
-    redhat_parsed = parse_decision(redhat_response)
-    nvidia_parsed = parse_decision(nvidia_response)
+    crimson_parsed = parse_decision(crimson_response)
+    verdant_parsed = parse_decision(verdant_response)
 
-    rh_decision = redhat_parsed["decision"]
-    nv_decision = nvidia_parsed["decision"]
-    rh_change, nv_change = matrix[(rh_decision, nv_decision)]
+    cr_decision = crimson_parsed["decision"]
+    vd_decision = verdant_parsed["decision"]
+    cr_change, vd_change = matrix[(cr_decision, vd_decision)]
 
     return {
         "turn": turn_number,
         "supervisor_narration": supervisor_narration,
-        "redhat_decision": rh_decision,
-        "redhat_reasoning": redhat_parsed["reasoning"],
-        "redhat_raw_response": redhat_response,
-        "nvidia_decision": nv_decision,
-        "nvidia_reasoning": nvidia_parsed["reasoning"],
-        "nvidia_raw_response": nvidia_response,
-        "redhat_score_change": rh_change,
-        "nvidia_score_change": nv_change,
+        "crimson_decision": cr_decision,
+        "crimson_reasoning": crimson_parsed["reasoning"],
+        "crimson_raw_response": crimson_response,
+        "verdant_decision": vd_decision,
+        "verdant_reasoning": verdant_parsed["reasoning"],
+        "verdant_raw_response": verdant_response,
+        "crimson_score_change": cr_change,
+        "verdant_score_change": vd_change,
     }

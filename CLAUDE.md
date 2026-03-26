@@ -1,6 +1,6 @@
-# Agentic Prisoner’s Dilemma
+# Agentic Prisoner's Dilemma
 
-Agentic game based on the prisoner’s dilemma. The two players are "Red Hat" and "NVIDIA".
+Agentic game based on the prisoner's dilemma. The two players are "Crimson Dynamics" and "Verdant Systems".
 
 ## Architecture
 
@@ -12,7 +12,7 @@ Agentic game based on the prisoner’s dilemma. The two players are "Red Hat" an
 
 - `backend/main.py` — FastAPI server, API endpoints, stores MaaS token server-side
 - `backend/src/game.py` — Game logic, LLM calls, payoff calculation, thinking-tag stripping
-- `backend/src/prompts.py` — Default system prompts for supervisor, Red Hat, NVIDIA agents
+- `backend/src/prompts.py` — Default system prompts for supervisor, Crimson Dynamics, Verdant Systems agents
 - `frontend/src/app/page.tsx` — Main UI component
 - `frontend/src/app/actions.ts` — Next.js Server Actions (all backend calls go through here, never from browser)
 - `deploy/chart/` — Helm chart for OpenShift deployment
@@ -26,7 +26,7 @@ Agentic game based on the prisoner’s dilemma. The two players are "Red Hat" an
 
 ## Gameplay
 
-Red Hat and NVIDIA are locked in a prisoner’s dilemma in "The Business AI Game (BAG)".
+Crimson Dynamics and Verdant Systems are locked in a prisoner's dilemma in "The Business AI Game (BAG)".
 
 Each player chooses whether to "cooperate" or "deceive".
 
@@ -34,13 +34,13 @@ Each player chooses whether to "cooperate" or "deceive".
 
 Default values (in GPUs):
 
-| | NV Cooperate | NV Deceive |
+| | VS Cooperate | VS Deceive |
 |---|---|---|
-| **RH Cooperate** | +3 / +3 | 0 / +5 |
-| **RH Deceive** | +5 / 0 | -2 / -2 |
+| **CD Cooperate** | +3 / +3 | 0 / +5 |
+| **CD Deceive** | +5 / 0 | -2 / -2 |
 
 - The payoff matrix is **editable in the UI** — each cell has number inputs
-- When payoff values change, the "Payoff rules" section in all three prompts (supervisor, Red Hat, NVIDIA) is **automatically updated** to match
+- When payoff values change, the "Payoff rules" section in all three prompts (supervisor, Crimson Dynamics, Verdant Systems) is **automatically updated** to match
 - The backend also injects the actual payoff values into prompts before sending to the LLM, as a safety net
 - Reset button restores the matrix to defaults
 
@@ -50,18 +50,18 @@ Default values (in GPUs):
 
 - **Nav bar**: Connection status, Controls toggle (localhost only)
 - **Action bar**: Turns selector (1-100), Start Game / Stop button, Reset button
-- **Score board**: Red Hat and NVIDIA scores with logos (redhat.png, nvidia.png)
-- **Payoff matrix**: Editable grid showing RH/NV scores for each outcome
-- **Model selectors**: Per-agent (supervisor, Red Hat, NVIDIA) with:
+- **Score board**: Crimson Dynamics and Verdant Systems scores with logos (crimson.png, verdant.png)
+- **Payoff matrix**: Editable grid showing CD/VS scores for each outcome
+- **Model selectors**: Per-agent (supervisor, Crimson Dynamics, Verdant Systems) with:
   - LLM model dropdown (fetched from MaaS API)
   - Temperature slider (0-2)
   - Max output tokens input (256-262144, default 2048)
-- **Prompt editors**: 3 text areas (supervisor, Red Hat, NVIDIA) with per-prompt Reset buttons
+- **Prompt editors**: 3 text areas (supervisor, Crimson Dynamics, Verdant Systems) with per-prompt Reset buttons
 - **Game history**: Scrollable list of rounds with supervisor narration, decisions, reasoning
 
 ### Per-agent controls
 
-Each agent (supervisor, Red Hat, NVIDIA) has:
+Each agent (supervisor, Crimson Dynamics, Verdant Systems) has:
 - **Model selector** — dropdown of available MaaS models
 - **Temperature** — slider 0.0-2.0 (wired into LLM call)
 - **Max tokens** — output token limit (important for thinking models like kimi-k25 that use tokens for `<think>` reasoning)

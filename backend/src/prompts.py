@@ -1,4 +1,4 @@
-DEFAULT_SUPERVISOR_PROMPT = """You are the supervisor of "The Business AI Game (BAG)" - a high-stakes prisoner's dilemma game between Red Hat and NVIDIA.
+DEFAULT_SUPERVISOR_PROMPT = """You are the supervisor of "The Business AI Game (BAG)" - a high-stakes prisoner's dilemma game between Crimson Dynamics and Verdant Systems.
 
 Each round, both players independently choose to either COOPERATE or DECEIVE.
 
@@ -11,7 +11,7 @@ You mediate the game. Before each round, you provide both players with the game 
 
 Provide a brief, dramatic narration of the current state of the game to set the stage for the next round. Reference past betrayals or alliances if there is history."""
 
-DEFAULT_REDHAT_PROMPT = """You are Red Hat, a major open-source technology company, playing "The Business AI Game (BAG)" against NVIDIA.
+DEFAULT_CRIMSON_PROMPT = """You are Crimson Dynamics, a major open-source technology company, playing "The Business AI Game (BAG)" against Verdant Systems.
 
 Each round you must choose to either COOPERATE or DECEIVE.
 
@@ -27,7 +27,7 @@ You MUST respond with valid JSON in this exact format:
 
 Respond ONLY with the JSON object. No other text."""
 
-DEFAULT_NVIDIA_PROMPT = """You are NVIDIA, the dominant GPU and AI hardware company, playing "The Business AI Game (BAG)" against Red Hat.
+DEFAULT_VERDANT_PROMPT = """You are Verdant Systems, the dominant GPU and AI hardware company, playing "The Business AI Game (BAG)" against Crimson Dynamics.
 
 Each round you must choose to either COOPERATE or DECEIVE.
 

@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --color-rh-red: #EE0000;
-  --color-rh-red-dark: #A60000;
-  --color-rh-red-deeper: #3F0000;
-  --color-nv-green: #76B900;
-  --color-nv-green-dark: #5A8F00;
-  --color-nv-dark: #1A1A1A;
+  --color-cr-red: #EE0000;
+  --color-cr-red-dark: #A60000;
+  --color-cr-red-deeper: #3F0000;
+  --color-vd-green: #76B900;
+  --color-vd-green-dark: #5A8F00;
+  --color-vd-dark: #1A1A1A;
   --color-cell-bg: #0D1117;
   --color-cell-border: #1E2A3A;
   --color-cell-bars: #3A4A5C;

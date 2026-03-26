@@ -24,12 +24,12 @@ interface MaasModel {
 interface TurnResult {
   turn: number;
   supervisor_narration: string;
-  redhat_decision: string;
-  redhat_reasoning: string;
-  nvidia_decision: string;
-  nvidia_reasoning: string;
-  redhat_score_change: number;
-  nvidia_score_change: number;
+  crimson_decision: string;
+  crimson_reasoning: string;
+  verdant_decision: string;
+  verdant_reasoning: string;
+  crimson_score_change: number;
+  verdant_score_change: number;
 }
 
 // --- Prison Bars SVG ---
@@ -201,10 +201,10 @@ function PayoffCell({
 function buildPayoffRulesText(cc: number[], cd: number[], dc: number[], dd: number[]) {
   const fmt = (v: number) => (v >= 0 ? `+${v}` : `${v}`);
   return [
-    `- If both cooperate: Red Hat gets ${fmt(cc[0])} GPUs, NVIDIA gets ${fmt(cc[1])} GPUs`,
-    `- If Red Hat cooperates and NVIDIA deceives: Red Hat gets ${fmt(cd[0])} GPUs, NVIDIA gets ${fmt(cd[1])} GPUs`,
-    `- If Red Hat deceives and NVIDIA cooperates: Red Hat gets ${fmt(dc[0])} GPUs, NVIDIA gets ${fmt(dc[1])} GPUs`,
-    `- If both deceive: Red Hat gets ${fmt(dd[0])} GPUs, NVIDIA gets ${fmt(dd[1])} GPUs`,
+    `- If both cooperate: Crimson Dynamics gets ${fmt(cc[0])} GPUs, Verdant Systems gets ${fmt(cc[1])} GPUs`,
+    `- If Crimson Dynamics cooperates and Verdant Systems deceives: Crimson Dynamics gets ${fmt(cd[0])} GPUs, Verdant Systems gets ${fmt(cd[1])} GPUs`,
+    `- If Crimson Dynamics deceives and Verdant Systems cooperates: Crimson Dynamics gets ${fmt(dc[0])} GPUs, Verdant Systems gets ${fmt(dc[1])} GPUs`,
+    `- If both deceive: Crimson Dynamics gets ${fmt(dd[0])} GPUs, Verdant Systems gets ${fmt(dd[1])} GPUs`,
   ].join("\n");
 }
 
@@ -227,20 +227,20 @@ export default function Home() {
 
   // Model selections
   const [supervisorModel, setSupervisorModel] = useState("");
-  const [redhatModel, setRedhatModel] = useState("");
-  const [nvidiaModel, setNvidiaModel] = useState("");
+  const [crimsonModel, setCrimsonModel] = useState("");
+  const [verdantModel, setVerdantModel] = useState("");
 
   // Temperatures
   const [supervisorTemp, setSupervisorTemp] = useState(0.7);
-  const [redhatTemp, setRedhatTemp] = useState(0.7);
-  const [nvidiaTemp, setNvidiaTemp] = useState(0.7);
+  const [crimsonTemp, setCrimsonTemp] = useState(0.7);
+  const [verdantTemp, setVerdantTemp] = useState(0.7);
 
   // Max tokens
   const [supervisorMaxTokens, setSupervisorMaxTokens] = useState(2048);
-  const [redhatMaxTokens, setRedhatMaxTokens] = useState(2048);
-  const [nvidiaMaxTokens, setNvidiaMaxTokens] = useState(2048);
+  const [crimsonMaxTokens, setCrimsonMaxTokens] = useState(2048);
+  const [verdantMaxTokens, setVerdantMaxTokens] = useState(2048);
 
-  // Payoff matrix [redhat, nvidia]
+  // Payoff matrix [crimson, verdant]
   const [payoffCC, setPayoffCC] = useState([3, 3]);
   const [payoffCD, setPayoffCD] = useState([0, 5]);
   const [payoffDC, setPayoffDC] = useState([5, 0]);
@@ -248,15 +248,15 @@ export default function Home() {
 
   // Prompts
   const [supervisorPrompt, setSupervisorPrompt] = useState("");
-  const [redhatPrompt, setRedhatPrompt] = useState("");
-  const [nvidiaPrompt, setNvidiaPrompt] = useState("");
-  const defaultPromptsRef = useRef({ supervisor: "", redhat: "", nvidia: "" });
+  const [crimsonPrompt, setCrimsonPrompt] = useState("");
+  const [verdantPrompt, setVerdantPrompt] = useState("");
+  const defaultPromptsRef = useRef({ supervisor: "", crimson: "", verdant: "" });
 
   // Game state
   const [numTurns, setNumTurns] = useState(1);
   const [currentTurn, setCurrentTurn] = useState(0);
-  const [redhatScore, setRedhatScore] = useState(0);
-  const [nvidiaScore, setNvidiaScore] = useState(0);
+  const [crimsonScore, setCrimsonScore] = useState(0);
+  const [verdantScore, setVerdantScore] = useState(0);
   const [history, setHistory] = useState<TurnResult[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showBars, setShowBars] = useState(false);
@@ -271,8 +271,8 @@ export default function Home() {
     fetchDefaultPrompts().then((data) => {
       defaultPromptsRef.current = data;
       setSupervisorPrompt(data.supervisor);
-      setRedhatPrompt(data.redhat);
-      setNvidiaPrompt(data.nvidia);
+      setCrimsonPrompt(data.crimson);
+      setVerdantPrompt(data.verdant);
     });
 
     setConnectionStatus("Connecting...");
@@ -291,8 +291,8 @@ export default function Home() {
   useEffect(() => {
     const rulesText = buildPayoffRulesText(payoffCC, payoffCD, payoffDC, payoffDD);
     setSupervisorPrompt((p) => injectPayoffRules(p, rulesText));
-    setRedhatPrompt((p) => injectPayoffRules(p, rulesText));
-    setNvidiaPrompt((p) => injectPayoffRules(p, rulesText));
+    setCrimsonPrompt((p) => injectPayoffRules(p, rulesText));
+    setVerdantPrompt((p) => injectPayoffRules(p, rulesText));
   }, [payoffCC, payoffCD, payoffDC, payoffDD]);
 
   // Scroll history into view
@@ -336,7 +336,7 @@ export default function Home() {
   };
 
   const playTurns = async () => {
-    if (!connected || !supervisorModel || !redhatModel || !nvidiaModel) {
+    if (!connected || !supervisorModel || !crimsonModel || !verdantModel) {
       setError("Please connect and select models for all agents first.");
       return;
     }
@@ -345,8 +345,8 @@ export default function Home() {
     stopRef.current = false;
 
     let currentHistory = [...history];
-    let rScore = redhatScore;
-    let nScore = nvidiaScore;
+    let crScore = crimsonScore;
+    let vdScore = verdantScore;
 
     for (let i = 0; i < numTurns; i++) {
       if (stopRef.current) break;
@@ -357,20 +357,20 @@ export default function Home() {
       const result = await playTurn({
         history: currentHistory,
         supervisor_prompt: supervisorPrompt,
-        redhat_prompt: redhatPrompt,
-        nvidia_prompt: nvidiaPrompt,
+        crimson_prompt: crimsonPrompt,
+        verdant_prompt: verdantPrompt,
         supervisor_model_url: getModelUrl(supervisorModel),
         supervisor_model_id: supervisorModel,
-        redhat_model_url: getModelUrl(redhatModel),
-        redhat_model_id: redhatModel,
-        nvidia_model_url: getModelUrl(nvidiaModel),
-        nvidia_model_id: nvidiaModel,
+        crimson_model_url: getModelUrl(crimsonModel),
+        crimson_model_id: crimsonModel,
+        verdant_model_url: getModelUrl(verdantModel),
+        verdant_model_id: verdantModel,
         supervisor_temp: supervisorTemp,
-        redhat_temp: redhatTemp,
-        nvidia_temp: nvidiaTemp,
+        crimson_temp: crimsonTemp,
+        verdant_temp: verdantTemp,
         supervisor_max_tokens: supervisorMaxTokens,
-        redhat_max_tokens: redhatMaxTokens,
-        nvidia_max_tokens: nvidiaMaxTokens,
+        crimson_max_tokens: crimsonMaxTokens,
+        verdant_max_tokens: verdantMaxTokens,
         payoff_cc: payoffCC,
         payoff_cd: payoffCD,
         payoff_dc: payoffDC,
@@ -385,12 +385,12 @@ export default function Home() {
       }
 
       currentHistory = [...currentHistory, result as TurnResult];
-      rScore += result.redhat_score_change;
-      nScore += result.nvidia_score_change;
+      crScore += result.crimson_score_change;
+      vdScore += result.verdant_score_change;
 
       setHistory([...currentHistory]);
-      setRedhatScore(rScore);
-      setNvidiaScore(nScore);
+      setCrimsonScore(crScore);
+      setVerdantScore(vdScore);
       setPhase("");
       setTimeout(() => setShowBars(false), 1500);
 
@@ -406,8 +406,8 @@ export default function Home() {
 
   const resetGame = () => {
     setHistory([]);
-    setRedhatScore(0);
-    setNvidiaScore(0);
+    setCrimsonScore(0);
+    setVerdantScore(0);
     setCurrentTurn(0);
     setError("");
     setPayoffCC([3, 3]);
@@ -424,7 +424,7 @@ export default function Home() {
       <nav className="relative z-10 flex items-center border-b border-cell-border bg-panel px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3">
           <h1 className="text-sm font-black tracking-tight sm:text-lg">
-            <span className="text-rh-red">THE</span>{" "}
+            <span className="text-cr-red">THE</span>{" "}
             <span className="text-text-primary">BUSINESS AI GAME</span>
           </h1>
           <span className="hidden text-xs text-text-muted sm:inline">BAG</span>
@@ -471,7 +471,7 @@ export default function Home() {
               <button
                 onClick={handleManualConnect}
                 disabled={!bearer || connected}
-                className="rounded bg-rh-red px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-rh-red-dark disabled:opacity-30"
+                className="rounded bg-cr-red px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-cr-red-dark disabled:opacity-30"
               >
                 Connect
               </button>
@@ -491,7 +491,7 @@ export default function Home() {
       <div className="border-b border-cell-border bg-panel px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3 sm:justify-between sm:gap-4">
           <p className="hidden text-sm text-text-muted sm:block">
-            Agentic Prisoner&apos;s Dilemma &mdash; Red Hat vs NVIDIA
+            Agentic Prisoner&apos;s Dilemma &mdash; Crimson Dynamics vs Verdant Systems
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
@@ -514,7 +514,7 @@ export default function Home() {
               className={`rounded-lg px-6 py-2 text-base font-black tracking-wider uppercase transition-all sm:px-8 sm:py-3 sm:text-lg ${
                 isPlaying
                   ? "bg-deceive text-white hover:bg-red-600"
-                  : "animate-pulse-glow bg-rh-red text-white hover:bg-rh-red-dark disabled:opacity-30 disabled:shadow-none"
+                  : "animate-pulse-glow bg-cr-red text-white hover:bg-cr-red-dark disabled:opacity-30 disabled:shadow-none"
               }`}
               style={
                 isPlaying ? {} : { animationPlayState: connected ? "running" : "paused" }
@@ -538,16 +538,16 @@ export default function Home() {
         {/* Score Board */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="flex items-center gap-3 rounded-lg border border-cell-border bg-panel p-3 sm:gap-4 sm:p-4">
-            <img src="/redhat.png" alt="Red Hat" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
+            <img src="/crimson.png" alt="Crimson Dynamics" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-rh-red sm:text-lg">Red Hat</h3>
+              <h3 className="text-sm font-bold text-cr-red sm:text-lg">Crimson Dynamics</h3>
               <p
                 className={`text-xl font-black sm:text-3xl ${
-                  redhatScore >= 0 ? "text-cooperate" : "text-deceive"
+                  crimsonScore >= 0 ? "text-cooperate" : "text-deceive"
                 } ${history.length > 0 ? "animate-score-pop" : ""}`}
-                key={`rh-${redhatScore}`}
+                key={`cr-${crimsonScore}`}
               >
-                {redhatScore >= 0 ? "+" : ""}{redhatScore} <span className="text-sm sm:text-xl">GPUs</span>
+                {crimsonScore >= 0 ? "+" : ""}{crimsonScore} <span className="text-sm sm:text-xl">GPUs</span>
               </p>
             </div>
           </div>
@@ -568,33 +568,33 @@ export default function Home() {
 
           <div className="flex items-center justify-end gap-3 rounded-lg border border-cell-border bg-panel p-3 sm:gap-4 sm:p-4">
             <div className="min-w-0 text-right">
-              <h3 className="text-sm font-bold text-nv-green sm:text-lg">NVIDIA</h3>
+              <h3 className="text-sm font-bold text-vd-green sm:text-lg">Verdant Systems</h3>
               <p
                 className={`text-xl font-black sm:text-3xl ${
-                  nvidiaScore >= 0 ? "text-cooperate" : "text-deceive"
+                  verdantScore >= 0 ? "text-cooperate" : "text-deceive"
                 } ${history.length > 0 ? "animate-score-pop" : ""}`}
-                key={`nv-${nvidiaScore}`}
+                key={`vd-${verdantScore}`}
               >
-                {nvidiaScore >= 0 ? "+" : ""}{nvidiaScore} <span className="text-sm sm:text-xl">GPUs</span>
+                {verdantScore >= 0 ? "+" : ""}{verdantScore} <span className="text-sm sm:text-xl">GPUs</span>
               </p>
             </div>
-            <img src="/nvidia.png" alt="NVIDIA" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
+            <img src="/verdant.png" alt="Verdant Systems" className="h-10 w-10 rounded-lg object-contain sm:h-16 sm:w-16" />
           </div>
         </div>
 
         {/* Payoff Matrix */}
         <div className="rounded-lg border border-cell-border bg-panel p-4">
           <h3 className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-text-muted">
-            Payoff Matrix (GPUs) &mdash; <span className="text-rh-red">RH</span> / <span className="text-nv-green">NV</span>
+            Payoff Matrix (GPUs) &mdash; <span className="text-cr-red">CD</span> / <span className="text-vd-green">VS</span>
           </h3>
           <div className="mx-auto grid max-w-lg grid-cols-3 gap-px text-center text-xs">
             <div />
-            <div className="bg-panel-light p-2 font-bold text-nv-green">NV Cooperate</div>
-            <div className="bg-panel-light p-2 font-bold text-nv-green">NV Deceive</div>
-            <div className="bg-panel-light p-2 font-bold text-rh-red">RH Cooperate</div>
+            <div className="bg-panel-light p-2 font-bold text-vd-green">VS Cooperate</div>
+            <div className="bg-panel-light p-2 font-bold text-vd-green">VS Deceive</div>
+            <div className="bg-panel-light p-2 font-bold text-cr-red">CD Cooperate</div>
             <PayoffCell values={payoffCC} onChange={setPayoffCC} />
             <PayoffCell values={payoffCD} onChange={setPayoffCD} />
-            <div className="bg-panel-light p-2 font-bold text-rh-red">RH Deceive</div>
+            <div className="bg-panel-light p-2 font-bold text-cr-red">CD Deceive</div>
             <PayoffCell values={payoffDC} onChange={setPayoffDC} />
             <PayoffCell values={payoffDD} onChange={setPayoffDD} />
           </div>
@@ -616,25 +616,25 @@ export default function Home() {
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <ModelSelector
-                label="Red Hat"
+                label="Crimson Dynamics"
                 models={models}
-                selectedModel={redhatModel}
-                onSelectModel={setRedhatModel}
-                temperature={redhatTemp}
-                onTemperatureChange={setRedhatTemp}
-                maxTokens={redhatMaxTokens}
-                onMaxTokensChange={setRedhatMaxTokens}
+                selectedModel={crimsonModel}
+                onSelectModel={setCrimsonModel}
+                temperature={crimsonTemp}
+                onTemperatureChange={setCrimsonTemp}
+                maxTokens={crimsonMaxTokens}
+                onMaxTokensChange={setCrimsonMaxTokens}
                 color="#EE0000"
               />
               <ModelSelector
-                label="NVIDIA"
+                label="Verdant Systems"
                 models={models}
-                selectedModel={nvidiaModel}
-                onSelectModel={setNvidiaModel}
-                temperature={nvidiaTemp}
-                onTemperatureChange={setNvidiaTemp}
-                maxTokens={nvidiaMaxTokens}
-                onMaxTokensChange={setNvidiaMaxTokens}
+                selectedModel={verdantModel}
+                onSelectModel={setVerdantModel}
+                temperature={verdantTemp}
+                onTemperatureChange={setVerdantTemp}
+                maxTokens={verdantMaxTokens}
+                onMaxTokensChange={setVerdantMaxTokens}
                 color="#76B900"
               />
             </div>
@@ -665,38 +665,38 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-cell-border bg-panel p-4">
               <div className="mb-2 flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-rh-red">
-                  Red Hat Prompt
+                <label className="text-xs font-bold uppercase tracking-wider text-cr-red">
+                  Crimson Dynamics Prompt
                 </label>
                 <button
-                  onClick={() => setRedhatPrompt(defaultPromptsRef.current.redhat)}
+                  onClick={() => setCrimsonPrompt(defaultPromptsRef.current.crimson)}
                   className="rounded border border-cell-border px-2 py-0.5 text-xs text-text-muted transition-colors hover:border-cell-bars hover:text-text-primary"
                 >
                   Reset
                 </button>
               </div>
               <textarea
-                value={redhatPrompt}
-                onChange={(e) => setRedhatPrompt(e.target.value)}
+                value={crimsonPrompt}
+                onChange={(e) => setCrimsonPrompt(e.target.value)}
                 rows={6}
                 className="scrollbar-thin w-full resize-y rounded border border-cell-border bg-cell-bg p-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-cell-bars"
               />
             </div>
             <div className="rounded-lg border border-cell-border bg-panel p-4">
               <div className="mb-2 flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-nv-green">
-                  NVIDIA Prompt
+                <label className="text-xs font-bold uppercase tracking-wider text-vd-green">
+                  Verdant Systems Prompt
                 </label>
                 <button
-                  onClick={() => setNvidiaPrompt(defaultPromptsRef.current.nvidia)}
+                  onClick={() => setVerdantPrompt(defaultPromptsRef.current.verdant)}
                   className="rounded border border-cell-border px-2 py-0.5 text-xs text-text-muted transition-colors hover:border-cell-bars hover:text-text-primary"
                 >
                   Reset
                 </button>
               </div>
               <textarea
-                value={nvidiaPrompt}
-                onChange={(e) => setNvidiaPrompt(e.target.value)}
+                value={verdantPrompt}
+                onChange={(e) => setVerdantPrompt(e.target.value)}
                 rows={6}
                 className="scrollbar-thin w-full resize-y rounded border border-cell-border bg-cell-bg p-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-cell-bars"
               />
@@ -727,11 +727,11 @@ export default function Home() {
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-sm font-bold text-gold">Round {turn.turn}</span>
                     <div className="flex items-center gap-4 text-sm">
-                      <span className={turn.redhat_score_change >= 0 ? "text-cooperate" : "text-deceive"}>
-                        RH: {turn.redhat_score_change >= 0 ? "+" : ""}{turn.redhat_score_change}
+                      <span className={turn.crimson_score_change >= 0 ? "text-cooperate" : "text-deceive"}>
+                        CD: {turn.crimson_score_change >= 0 ? "+" : ""}{turn.crimson_score_change}
                       </span>
-                      <span className={turn.nvidia_score_change >= 0 ? "text-cooperate" : "text-deceive"}>
-                        NV: {turn.nvidia_score_change >= 0 ? "+" : ""}{turn.nvidia_score_change}
+                      <span className={turn.verdant_score_change >= 0 ? "text-cooperate" : "text-deceive"}>
+                        VS: {turn.verdant_score_change >= 0 ? "+" : ""}{turn.verdant_score_change}
                       </span>
                     </div>
                   </div>
@@ -743,19 +743,19 @@ export default function Home() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div className="rounded border border-cell-border bg-panel p-3">
                       <div className="mb-2 flex items-center gap-2">
-                        <img src="/redhat.png" alt="Red Hat" className="h-6 w-6 object-contain" />
-                        <span className="text-sm font-bold text-rh-red">Red Hat</span>
+                        <img src="/crimson.png" alt="Crimson Dynamics" className="h-6 w-6 object-contain" />
+                        <span className="text-sm font-bold text-cr-red">Crimson Dynamics</span>
                       </div>
-                      <DecisionStamp decision={turn.redhat_decision} />
-                      <p className="mt-2 text-xs text-text-muted">{turn.redhat_reasoning}</p>
+                      <DecisionStamp decision={turn.crimson_decision} />
+                      <p className="mt-2 text-xs text-text-muted">{turn.crimson_reasoning}</p>
                     </div>
                     <div className="rounded border border-cell-border bg-panel p-3">
                       <div className="mb-2 flex items-center gap-2">
-                        <img src="/nvidia.png" alt="NVIDIA" className="h-6 w-6 object-contain" />
-                        <span className="text-sm font-bold text-nv-green">NVIDIA</span>
+                        <img src="/verdant.png" alt="Verdant Systems" className="h-6 w-6 object-contain" />
+                        <span className="text-sm font-bold text-vd-green">Verdant Systems</span>
                       </div>
-                      <DecisionStamp decision={turn.nvidia_decision} />
-                      <p className="mt-2 text-xs text-text-muted">{turn.nvidia_reasoning}</p>
+                      <DecisionStamp decision={turn.verdant_decision} />
+                      <p className="mt-2 text-xs text-text-muted">{turn.verdant_reasoning}</p>
                     </div>
                   </div>
                 </div>

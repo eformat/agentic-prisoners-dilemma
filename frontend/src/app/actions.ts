@@ -29,7 +29,7 @@ export async function fetchDefaultPrompts() {
     const resp = await fetch(`${BACKEND_URL}/api/default-prompts`);
     return resp.json();
   } catch {
-    return { supervisor: "", redhat: "", nvidia: "" };
+    return { supervisor: "", crimson: "", verdant: "" };
   }
 }
 
@@ -55,20 +55,20 @@ export async function getConnectionStatus() {
 interface PlayTurnConfig {
   history: unknown[];
   supervisor_prompt: string;
-  redhat_prompt: string;
-  nvidia_prompt: string;
+  crimson_prompt: string;
+  verdant_prompt: string;
   supervisor_model_url: string;
   supervisor_model_id: string;
-  redhat_model_url: string;
-  redhat_model_id: string;
-  nvidia_model_url: string;
-  nvidia_model_id: string;
+  crimson_model_url: string;
+  crimson_model_id: string;
+  verdant_model_url: string;
+  verdant_model_id: string;
   supervisor_temp: number;
-  redhat_temp: number;
-  nvidia_temp: number;
+  crimson_temp: number;
+  verdant_temp: number;
   supervisor_max_tokens: number;
-  redhat_max_tokens: number;
-  nvidia_max_tokens: number;
+  crimson_max_tokens: number;
+  verdant_max_tokens: number;
   payoff_cc: number[];
   payoff_cd: number[];
   payoff_dc: number[];

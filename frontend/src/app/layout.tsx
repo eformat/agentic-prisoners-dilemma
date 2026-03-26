@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "The Business AI Game (BAG)",
-  description: "Agentic Prisoner's Dilemma - Red Hat vs NVIDIA",
+  description: "Agentic Prisoner's Dilemma - Crimson Dynamics vs Verdant Systems",
 };
 
 export default function RootLayout({
