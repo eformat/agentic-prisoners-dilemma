@@ -21,30 +21,17 @@ _maas_token: str = ""
 _models_cache: list[dict] = []
 
 
-async def _obtain_token(bearer: str) -> tuple[str, list[dict]]:
-    """Get MaaS token from bearer and fetch models. Store both server-side."""
-    global _maas_token, _models_cache
-    resp = await http_client.post(
-        f"{MAAS_HOST}/maas-api/v1/tokens",
-        headers={
-            "Authorization": f"Bearer {bearer}",
-            "Content-Type": "application/json",
-        },
-        json={"expiration": "720h"},
-    )
-    resp.raise_for_status()
-    _maas_token = resp.json().get("token", "")
-
-    models_resp = await http_client.get(
+async def _fetch_models(token: str) -> list[dict]:
+    """Fetch models from MaaS API using token directly."""
+    resp = await http_client.get(
         f"{MAAS_HOST}/maas-api/v1/models",
         headers={
-            "Authorization": f"Bearer {_maas_token}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
     )
-    models_resp.raise_for_status()
-    _models_cache = models_resp.json().get("data", [])
-    return _maas_token, _models_cache
+    resp.raise_for_status()
+    return resp.json().get("data", [])
 
 
 @asynccontextmanager
@@ -108,9 +95,11 @@ async def get_status():
 @app.post("/api/connect")
 async def connect(req: ConnectRequest):
     """Manual connect with a bearer token. Token is stored server-side only."""
+    global _maas_token, _models_cache
     try:
-        _, models = await _obtain_token(req.bearer)
-        return {"connected": True, "models": models}
+        _maas_token = req.bearer
+        _models_cache = await _fetch_models(_maas_token)
+        return {"connected": True, "models": _models_cache}
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=str(e))
     except Exception as e:
@@ -119,13 +108,15 @@ async def connect(req: ConnectRequest):
 
 @app.get("/api/auto-connect")
 async def auto_connect():
-    """Auto-connect using BEARER env var. Token is stored server-side only."""
-    bearer = os.getenv("BEARER", "")
-    if not bearer:
+    """Auto-connect using MODEL_TOKEN env var. Token is stored server-side only."""
+    global _maas_token, _models_cache
+    token = os.getenv("MODEL_TOKEN", "")
+    if not token:
         return {"connected": False}
     try:
-        _, models = await _obtain_token(bearer)
-        return {"connected": True, "models": models}
+        _maas_token = token
+        _models_cache = await _fetch_models(token)
+        return {"connected": True, "models": _models_cache}
     except Exception as e:
         return {"connected": False, "error": str(e)}
 

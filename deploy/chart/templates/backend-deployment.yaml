@@ -27,11 +27,11 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
-            - name: BEARER
+            - name: MODEL_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ include "prisoners-dilemma.fullname" . }}-backend
-                  key: BEARER
+                  key: MODEL_TOKEN
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           readinessProbe:

@@ -16,7 +16,7 @@ backend:
     MAAS_HOST: "https://maas.apps.ocp.cloud.rhai-tmm.dev"
   secret:
     create: true
-    BEARER: ""
+    MODEL_TOKEN: ""
 
 frontend:
   image:
